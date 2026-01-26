@@ -1,0 +1,37 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#a855f7"/>
+            <stop offset="50%" style="stop-color:#8b5cf6"/>
+            <stop offset="100%" style="stop-color:#7c3aed"/>
+        </linearGradient>
+        <linearGradient id="shieldFill" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" style="stop-color:#9333ea;stop-opacity:0.7"/>
+            <stop offset="100%" style="stop-color:#6d28d9;stop-opacity:0.8"/>
+        </linearGradient>
+    </defs>
+    
+    <!-- Solid background -->
+    <rect width="512" height="512" fill="url(#bgGradient)"/>
+    
+    <!-- Shield outline (white stroke) -->
+    <path d="M256 60 L410 130 L410 240 C410 340 340 420 256 450 C172 420 102 340 102 240 L102 130 L256 60Z" 
+          fill="none" 
+          stroke="rgba(255,255,255,0.85)" 
+          stroke-width="12"/>
+    
+    <!-- Shield inner fill -->
+    <path d="M256 85 L390 145 L390 235 C390 325 327 397 256 425 C185 397 122 325 122 235 L122 145 L256 85Z" 
+          fill="url(#shieldFill)"/>
+    
+    <!-- Camera Shutter/Aperture Icon -->
+    <g transform="translate(256, 250)">
+        <path d="M0 -70 L30 -35 L10 0 L-20 -20 Z" fill="white"/>
+        <path d="M0 -70 L30 -35 L10 0 L-20 -20 Z" fill="white" transform="rotate(60)"/>
+        <path d="M0 -70 L30 -35 L10 0 L-20 -20 Z" fill="white" transform="rotate(120)"/>
+        <path d="M0 -70 L30 -35 L10 0 L-20 -20 Z" fill="white" transform="rotate(180)"/>
+        <path d="M0 -70 L30 -35 L10 0 L-20 -20 Z" fill="white" transform="rotate(240)"/>
+        <path d="M0 -70 L30 -35 L10 0 L-20 -20 Z" fill="white" transform="rotate(300)"/>
+        <circle cx="0" cy="0" r="22" fill="#7c3aed"/>
+    </g>
+</svg>
