@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import mediapipe as mp
+import os
 from ultralytics import YOLO
 from typing import List, Tuple
 import logging
@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 
 class PrivacyDetector:
-    """Handles face and license plate detection using MediaPipe and YOLOv8."""
+    """Handles face and license plate detection using OpenCV and YOLOv8."""
     
     _instance = None
     _initialized = False
@@ -28,12 +28,16 @@ class PrivacyDetector:
         
         logger.info("Initializing AI detection models...")
         
-        # Initialize MediaPipe Face Detection
-        self.mp_face_detection = mp.solutions.face_detection
-        self.face_detector = self.mp_face_detection.FaceDetection(
-            model_selection=1,  # 0 for short-range, 1 for full-range
-            min_detection_confidence=settings.FACE_DETECTION_CONFIDENCE
-        )
+        # Initialize OpenCV Haar Cascade for Face Detection (Python 3.13 compatible)
+        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+        self.face_cascade = cv2.CascadeClassifier(cascade_path)
+        
+        if self.face_cascade.empty():
+            logger.error("Failed to load Haar Cascade for face detection")
+            self.face_detector_loaded = False
+        else:
+            self.face_detector_loaded = True
+            logger.info("OpenCV Face Cascade loaded successfully")
         
         # Initialize YOLO for license plate detection
         # Using YOLOv8n (nano) for speed - will detect vehicles, then we look for plates
@@ -50,45 +54,47 @@ class PrivacyDetector:
         logger.info("AI detection models initialized successfully")
     
     def detect_faces(self, image: np.ndarray) -> List[BoundingBox]:
-        """Detect faces in an image using MediaPipe."""
+        """Detect faces in an image using OpenCV Haar Cascade."""
         detections = []
         
-        # Convert BGR to RGB for MediaPipe
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = self.face_detector.process(rgb_image)
+        if not self.face_detector_loaded:
+            return detections
         
-        if results.detections:
-            h, w, _ = image.shape
-            for detection in results.detections:
-                bbox = detection.location_data.relative_bounding_box
-                
-                # Convert relative coordinates to absolute
-                x = int(bbox.xmin * w)
-                y = int(bbox.ymin * h)
-                width = int(bbox.width * w)
-                height = int(bbox.height * h)
-                
-                # Ensure coordinates are within image bounds
-                x = max(0, x)
-                y = max(0, y)
-                width = min(width, w - x)
-                height = min(height, h - y)
-                
-                # Add padding for better coverage
-                padding = int(min(width, height) * 0.1)
-                x = max(0, x - padding)
-                y = max(0, y - padding)
-                width = min(width + 2 * padding, w - x)
-                height = min(height + 2 * padding, h - y)
-                
-                detections.append(BoundingBox(
-                    x=x,
-                    y=y,
-                    width=width,
-                    height=height,
-                    confidence=detection.score[0],
-                    detection_type=DetectionType.FACE
-                ))
+        # Convert to grayscale for Haar Cascade
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        h, w = image.shape[:2]
+        
+        # Detect faces
+        faces = self.face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.1,
+            minNeighbors=5,
+            minSize=(30, 30),
+            flags=cv2.CASCADE_SCALE_IMAGE
+        )
+        
+        for (x, y, width, height) in faces:
+            # Ensure coordinates are within image bounds
+            x = max(0, x)
+            y = max(0, y)
+            width = min(width, w - x)
+            height = min(height, h - y)
+            
+            # Add padding for better coverage
+            padding = int(min(width, height) * 0.1)
+            x = max(0, x - padding)
+            y = max(0, y - padding)
+            width = min(width + 2 * padding, w - x)
+            height = min(height + 2 * padding, h - y)
+            
+            detections.append(BoundingBox(
+                x=x,
+                y=y,
+                width=width,
+                height=height,
+                confidence=0.9,  # Haar Cascade doesn't provide confidence scores
+                detection_type=DetectionType.FACE
+            ))
         
         return detections
     
@@ -165,7 +171,7 @@ class PrivacyDetector:
     @property
     def models_loaded(self) -> bool:
         """Check if all models are loaded."""
-        return self.face_detector is not None
+        return self.face_detector_loaded
 
 
 # Singleton instance
