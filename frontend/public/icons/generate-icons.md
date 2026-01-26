@@ -25,10 +25,24 @@
 2. อัพโหลด `icon-svg-base.svg`
 3. ดาวน์โหลด icon pack
 
-### วิธีที่ 2: ใช้ ImageMagick (Command Line)
+### วิธีที่ 2: ใช้ npm script (แนะนำ)
 
 ```bash
-# Install ImageMagick first
+# ติดตั้ง sharp (ถ้ายังไม่มี)
+npm install sharp --save-dev
+
+# รัน script สร้าง icons
+npm run generate-icons
+```
+
+Script จะสร้างไฟล์ทั้งหมดใน `public/icons/` โดยอัตโนมัติ
+
+### วิธีที่ 3: ใช้ ImageMagick (Command Line)
+
+> ⚠️ ต้องติดตั้ง ImageMagick ก่อน และต้องใช้ Admin rights
+
+```bash
+# Install ImageMagick first (ต้องรัน terminal ด้วย Admin)
 # Windows: choco install imagemagick
 # Mac: brew install imagemagick
 
@@ -47,7 +61,7 @@ cp icon-192.png icon-maskable-192.png
 cp icon-512.png icon-maskable-512.png
 ```
 
-### วิธีที่ 3: ใช้ Sharp (Node.js)
+### วิธีที่ 4: ใช้ Sharp (Node.js) - Custom Script
 
 ```javascript
 const sharp = require('sharp');
@@ -62,7 +76,7 @@ sizes.forEach(size => {
 });
 ```
 
-### วิธีที่ 4: ใช้ Figma/Canva
+### วิธีที่ 5: ใช้ Figma/Canva
 
 1. Import SVG เข้า Figma
 2. Export เป็น PNG ขนาดต่างๆ
