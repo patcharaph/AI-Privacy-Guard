@@ -1,7 +1,6 @@
 import cv2
 import numpy as np
 import os
-from ultralytics import YOLO
 from typing import List, Tuple
 import logging
 
@@ -12,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class PrivacyDetector:
-    """Handles face and license plate detection using OpenCV and YOLOv8."""
+    """Handles face and license plate detection using OpenCV (Python 3.11+ compatible)."""
     
     _instance = None
     _initialized = False
@@ -28,7 +27,7 @@ class PrivacyDetector:
         
         logger.info("Initializing AI detection models...")
         
-        # Initialize OpenCV Haar Cascade for Face Detection (Python 3.13 compatible)
+        # Initialize OpenCV Haar Cascade for Face Detection
         cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
         self.face_cascade = cv2.CascadeClassifier(cascade_path)
         
@@ -39,16 +38,15 @@ class PrivacyDetector:
             self.face_detector_loaded = True
             logger.info("OpenCV Face Cascade loaded successfully")
         
-        # Initialize YOLO for license plate detection
-        # Using YOLOv8n (nano) for speed - will detect vehicles, then we look for plates
-        try:
-            self.yolo_model = YOLO(settings.YOLO_MODEL)
-            self.yolo_loaded = True
-            logger.info("YOLO model loaded successfully")
-        except Exception as e:
-            logger.warning(f"Failed to load YOLO model: {e}. License plate detection will be limited.")
-            self.yolo_model = None
-            self.yolo_loaded = False
+        # Initialize OpenCV Haar Cascade for vehicle/car detection (for license plates)
+        car_cascade_path = cv2.data.haarcascades + 'haarcascade_car.xml'
+        if os.path.exists(car_cascade_path):
+            self.car_cascade = cv2.CascadeClassifier(car_cascade_path)
+            self.car_detector_loaded = not self.car_cascade.empty()
+        else:
+            self.car_cascade = None
+            self.car_detector_loaded = False
+            logger.warning("Car cascade not available, license plate detection will be limited")
         
         PrivacyDetector._initialized = True
         logger.info("AI detection models initialized successfully")
@@ -99,53 +97,49 @@ class PrivacyDetector:
         return detections
     
     def detect_license_plates(self, image: np.ndarray) -> List[BoundingBox]:
-        """Detect license plates using YOLO."""
+        """Detect license plates using OpenCV Haar Cascade for cars."""
         detections = []
         
-        if not self.yolo_loaded or self.yolo_model is None:
+        if not self.car_detector_loaded or self.car_cascade is None:
+            # Fallback: return empty if no car detector available
             return detections
         
         try:
-            # Run YOLO detection
-            results = self.yolo_model(image, verbose=False)
+            # Convert to grayscale
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            h, w = image.shape[:2]
             
-            for result in results:
-                boxes = result.boxes
-                if boxes is None:
-                    continue
+            # Detect cars/vehicles
+            cars = self.car_cascade.detectMultiScale(
+                gray,
+                scaleFactor=1.1,
+                minNeighbors=3,
+                minSize=(60, 60)
+            )
+            
+            for (x, y, car_width, car_height) in cars:
+                # Estimate license plate region (typically lower portion of vehicle)
+                # License plate is typically in the lower 30% of the vehicle
+                plate_y = int(y + car_height * 0.6)
+                plate_height = int(car_height * 0.25)
+                plate_x = int(x + car_width * 0.2)
+                plate_width = int(car_width * 0.6)
                 
-                for box in boxes:
-                    # Get class ID - we're looking for cars, trucks, buses, motorcycles
-                    cls_id = int(box.cls[0])
-                    class_name = self.yolo_model.names[cls_id]
-                    
-                    # Vehicle classes in COCO dataset
-                    vehicle_classes = ['car', 'truck', 'bus', 'motorcycle']
-                    
-                    if class_name in vehicle_classes:
-                        # Get bounding box coordinates
-                        x1, y1, x2, y2 = box.xyxy[0].cpu().numpy()
-                        confidence = float(box.conf[0])
-                        
-                        if confidence >= settings.PLATE_DETECTION_CONFIDENCE:
-                            # Estimate license plate region (typically lower portion of vehicle)
-                            vehicle_width = x2 - x1
-                            vehicle_height = y2 - y1
-                            
-                            # License plate is typically in the lower 30% of the vehicle
-                            plate_y = int(y1 + vehicle_height * 0.6)
-                            plate_height = int(vehicle_height * 0.25)
-                            plate_x = int(x1 + vehicle_width * 0.2)
-                            plate_width = int(vehicle_width * 0.6)
-                            
-                            detections.append(BoundingBox(
-                                x=plate_x,
-                                y=plate_y,
-                                width=plate_width,
-                                height=plate_height,
-                                confidence=confidence,
-                                detection_type=DetectionType.LICENSE_PLATE
-                            ))
+                # Ensure coordinates are within bounds
+                plate_x = max(0, plate_x)
+                plate_y = max(0, plate_y)
+                plate_width = min(plate_width, w - plate_x)
+                plate_height = min(plate_height, h - plate_y)
+                
+                if plate_width > 0 and plate_height > 0:
+                    detections.append(BoundingBox(
+                        x=plate_x,
+                        y=plate_y,
+                        width=plate_width,
+                        height=plate_height,
+                        confidence=0.8,
+                        detection_type=DetectionType.LICENSE_PLATE
+                    ))
         except Exception as e:
             logger.error(f"Error during license plate detection: {e}")
         
