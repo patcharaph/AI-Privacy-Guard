@@ -85,6 +85,9 @@ async def process_images(
     except ValueError:
         blur_mode_enum = BlurMode.GAUSSIAN
     
+    # Log received emoji for debugging
+    logger.info(f"Received emoji: '{emoji}' (repr: {repr(emoji)})")
+    
     # Create processing options
     options = ProcessingOptions(
         blur_mode=blur_mode_enum,

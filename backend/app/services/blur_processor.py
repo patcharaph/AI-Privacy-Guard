@@ -108,22 +108,25 @@ class BlurProcessor:
         center_y = y + h // 2
         radius = min(w, h) // 2
         
+        # Normalize emoji (remove variation selectors)
+        emoji_normalized = emoji.replace('\ufe0f', '').strip()
+        
         # Choose color based on emoji type
         emoji_colors = {
             "😀": (0, 200, 255),   # Yellow - Smile
             "😎": (0, 200, 255),   # Yellow - Cool
             "🙈": (139, 90, 43),   # Brown - Monkey
             "⭐": (0, 215, 255),    # Gold - Star
-            "❤️": (0, 0, 255),      # Red - Heart
+            "❤": (0, 0, 255),      # Red - Heart (without variation selector)
             "🔒": (255, 150, 0),   # Blue - Lock
         }
-        color = emoji_colors.get(emoji, (0, 200, 255))
+        color = emoji_colors.get(emoji_normalized, (0, 200, 255))
         
         # Draw filled circle
         cv2.circle(overlay, (center_x, center_y), radius, color, -1)
         
-        # Add features based on emoji type
-        if emoji in ["😀", "😎"]:
+        # Add features based on emoji type (use normalized emoji for comparison)
+        if emoji_normalized in ["😀", "😎"]:
             # Eyes
             eye_radius = max(2, radius // 8)
             eye_y = center_y - radius // 4
@@ -132,7 +135,7 @@ class BlurProcessor:
             cv2.circle(overlay, (left_eye_x, eye_y), eye_radius, (0, 0, 0), -1)
             cv2.circle(overlay, (right_eye_x, eye_y), eye_radius, (0, 0, 0), -1)
             
-            if emoji == "😎":
+            if emoji_normalized == "😎":
                 # Sunglasses for cool emoji
                 cv2.line(overlay, (left_eye_x - eye_radius*2, eye_y), 
                         (right_eye_x + eye_radius*2, eye_y), (0, 0, 0), max(2, radius // 10))
@@ -141,12 +144,12 @@ class BlurProcessor:
             smile_y = center_y + radius // 4
             cv2.ellipse(overlay, (center_x, smile_y), 
                        (radius // 3, radius // 6), 0, 0, 180, (0, 0, 0), 2)
-        elif emoji == "🙈":
+        elif emoji_normalized == "🙈":
             # Monkey covering eyes
             eye_y = center_y - radius // 6
             cv2.ellipse(overlay, (center_x, eye_y), 
                        (radius // 2, radius // 4), 0, 0, 360, (80, 50, 30), -1)
-        elif emoji == "⭐":
+        elif emoji_normalized == "⭐":
             # Star shape (simplified as circle with points)
             pts = []
             for i in range(5):
@@ -159,14 +162,14 @@ class BlurProcessor:
                 py2 = int(center_y + radius * 0.4 * np.sin(np.radians(angle2)))
                 pts.append([px2, py2])
             cv2.fillPoly(overlay, [np.array(pts)], color)
-        elif emoji == "❤️":
+        elif emoji_normalized == "❤":
             # Heart shape (simplified)
             cv2.circle(overlay, (center_x - radius//3, center_y - radius//4), radius//2, color, -1)
             cv2.circle(overlay, (center_x + radius//3, center_y - radius//4), radius//2, color, -1)
             pts = np.array([[center_x - radius, center_y], [center_x, center_y + radius], 
                            [center_x + radius, center_y]], np.int32)
             cv2.fillPoly(overlay, [pts], color)
-        elif emoji == "🔒":
+        elif emoji_normalized == "🔒":
             # Lock icon
             lock_size = radius // 2
             lock_x = center_x - lock_size // 2
