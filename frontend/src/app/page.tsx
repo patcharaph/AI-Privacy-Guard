@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useState, useCallback, useEffect } from "react";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Shield, Loader2, AlertCircle } from "lucide-react";
 import {
   UploadZone,
@@ -10,7 +10,7 @@ import {
   FeedbackModal,
   BlurMode,
 } from "@/components";
-import { processImages, submitFeedback, ProcessedImageResult } from "@/lib/api";
+import { processImages, submitFeedback, getQuota, ProcessedImageResult } from "@/lib/api";
 
 export default function Home() {
   // Upload state
@@ -29,6 +29,14 @@ export default function Home() {
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [feedbackImageId, setFeedbackImageId] = useState<string | undefined>();
 
+  // Quota query
+  const quotaQuery = useQuery({
+    queryKey: ["quota"],
+    queryFn: getQuota,
+    refetchInterval: 60000, // Refetch every minute
+    retry: false,
+  });
+
   // Processing mutation
   const processMutation = useMutation({
     mutationFn: async () => {
@@ -41,6 +49,7 @@ export default function Home() {
     },
     onSuccess: (data) => {
       setResults(data.results);
+      quotaQuery.refetch(); // Refetch quota after processing
     },
   });
 
@@ -156,9 +165,21 @@ export default function Home() {
 
             {/* Process Button */}
             <div className="space-y-3">
+              {/* Quota Display */}
+              {quotaQuery.data && (
+                <div className="flex items-center justify-between text-sm px-1">
+                  <span className="text-slate-600">
+                    Batches today: <span className="font-medium">{quotaQuery.data.used}/{quotaQuery.data.limit}</span> used
+                  </span>
+                  <span className={`font-medium ${quotaQuery.data.remaining === 0 ? 'text-red-500' : 'text-green-600'}`}>
+                    {quotaQuery.data.remaining} remaining
+                  </span>
+                </div>
+              )}
+
               <button
                 onClick={handleProcess}
-                disabled={!hasFiles || isProcessing}
+                disabled={!hasFiles || isProcessing || (quotaQuery.data?.remaining === 0)}
                 className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-primary-600 text-white text-lg font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-600/20"
               >
                 {isProcessing ? (
@@ -198,10 +219,22 @@ export default function Home() {
               <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
                 <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="font-medium text-red-800">Processing failed</p>
-                  <p className="text-sm text-red-600 mt-1">
-                    {processMutation.error?.message || "An unexpected error occurred"}
-                  </p>
+                  {processMutation.error?.message?.includes("rate limit") || 
+                   processMutation.error?.message?.includes("429") ? (
+                    <>
+                      <p className="font-medium text-red-800">Daily limit reached (BETA)</p>
+                      <p className="text-sm text-red-600 mt-1">
+                        You've used 5/5 batches today. Try again tomorrow.
+                      </p>
+                    </>
+                  ) : (
+                    <>
+                      <p className="font-medium text-red-800">Processing failed</p>
+                      <p className="text-sm text-red-600 mt-1">
+                        {processMutation.error?.message || "An unexpected error occurred"}
+                      </p>
+                    </>
+                  )}
                 </div>
               </div>
             )}

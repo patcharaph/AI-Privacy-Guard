@@ -175,3 +175,18 @@ async def get_stats():
         },
         "rate_limit_store_size": len(rate_limit_store)
     }
+
+
+@router.get("/quota")
+async def get_quota(request: Request):
+    """Get current quota usage for the client."""
+    client_ip = request.client.host if request.client else "unknown"
+    used = rate_limit_store.get(client_ip, 0)
+    limit = settings.RATE_LIMIT_PER_DAY
+    remaining = max(0, limit - used)
+    
+    return {
+        "used": used,
+        "limit": limit,
+        "remaining": remaining
+    }

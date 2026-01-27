@@ -100,3 +100,14 @@ export async function healthCheck(): Promise<{
   const response = await fetch(`${API_BASE_URL}/api/health`);
   return response.json();
 }
+
+export interface QuotaResponse {
+  used: number;
+  limit: number;
+  remaining: number;
+}
+
+export async function getQuota(): Promise<QuotaResponse> {
+  const response = await fetch(`${API_BASE_URL}/api/quota`);
+  return response.json();
+}
