@@ -97,13 +97,13 @@ export default function Home() {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-primary-100 rounded-lg">
-                <Shield className="w-6 h-6 text-primary-600" />
+                <img src="/icons/icon-72.png" alt="AI Privacy Guard" className="w-6 h-6" />
               </div>
               <div>
                 <h1 className="text-xl font-bold text-slate-800">
                   AI Privacy Guard
                 </h1>
-                <p className="text-xs text-slate-500">BETA</p>
+                <p className="text-xs text-slate-500">BETA · Free Trial</p>
               </div>
             </div>
             {hasResults && (

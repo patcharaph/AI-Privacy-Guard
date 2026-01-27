@@ -177,8 +177,13 @@ export function UploadZone({
                 key={`${file.name}-${index}`}
                 className="relative group bg-white border border-slate-200 rounded-lg overflow-hidden"
               >
-                <div className="aspect-square bg-slate-100 flex items-center justify-center">
-                  <ImageIcon className="w-8 h-8 text-slate-400" />
+                <div className="aspect-square bg-slate-100 flex items-center justify-center overflow-hidden">
+                  <img
+                    src={URL.createObjectURL(file)}
+                    alt={file.name}
+                    className="w-full h-full object-cover"
+                    onLoad={(e) => URL.revokeObjectURL((e.target as HTMLImageElement).src)}
+                  />
                 </div>
                 <div className="p-2">
                   <p className="text-xs font-medium text-slate-700 truncate">
