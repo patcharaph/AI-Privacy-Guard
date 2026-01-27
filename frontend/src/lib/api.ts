@@ -111,3 +111,21 @@ export async function getQuota(): Promise<QuotaResponse> {
   const response = await fetch(`${API_BASE_URL}/api/quota`);
   return response.json();
 }
+
+export interface RequestQuotaResponse {
+  success: boolean;
+  message: string;
+  request_id: string;
+}
+
+export async function requestExtraQuota(useCase: string, email: string): Promise<RequestQuotaResponse> {
+  const formData = new FormData();
+  formData.append("use_case", useCase);
+  formData.append("email", email);
+
+  const response = await fetch(`${API_BASE_URL}/api/request-quota`, {
+    method: "POST",
+    body: formData,
+  });
+  return response.json();
+}

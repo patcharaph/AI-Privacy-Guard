@@ -8,9 +8,10 @@ import {
   ControlPanel,
   PreviewPanel,
   FeedbackModal,
+  QuotaRequestModal,
   BlurMode,
 } from "@/components";
-import { processImages, submitFeedback, getQuota, ProcessedImageResult } from "@/lib/api";
+import { processImages, submitFeedback, getQuota, requestExtraQuota, ProcessedImageResult } from "@/lib/api";
 
 export default function Home() {
   // Upload state
@@ -28,6 +29,9 @@ export default function Home() {
   // Feedback modal state
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [feedbackImageId, setFeedbackImageId] = useState<string | undefined>();
+
+  // Quota request modal state
+  const [quotaModalOpen, setQuotaModalOpen] = useState(false);
 
   // Quota query
   const quotaQuery = useQuery({
@@ -214,18 +218,43 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Quota Exhausted - Request More */}
+            {quotaQuery.data?.remaining === 0 && !processMutation.isError && (
+              <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <AlertCircle className="w-5 h-5 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <p className="font-medium text-amber-800">Daily limit reached (BETA)</p>
+                  <p className="text-sm text-amber-700 mt-1">
+                    You've used all your batches for today.
+                  </p>
+                  <button
+                    onClick={() => setQuotaModalOpen(true)}
+                    className="mt-3 px-4 py-2 bg-amber-600 text-white text-sm font-medium rounded-lg hover:bg-amber-700"
+                  >
+                    Request Extra Quota (Free)
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* Error Display */}
             {processMutation.isError && (
               <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
                 <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                <div>
+                <div className="flex-1">
                   {processMutation.error?.message?.includes("rate limit") || 
                    processMutation.error?.message?.includes("429") ? (
                     <>
                       <p className="font-medium text-red-800">Daily limit reached (BETA)</p>
                       <p className="text-sm text-red-600 mt-1">
-                        You've used 5/5 batches today. Try again tomorrow.
+                        You've used 5/5 batches today.
                       </p>
+                      <button
+                        onClick={() => setQuotaModalOpen(true)}
+                        className="mt-3 px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-lg hover:bg-primary-700"
+                      >
+                        Request Extra Quota (Free)
+                      </button>
                     </>
                   ) : (
                     <>
@@ -277,6 +306,16 @@ export default function Home() {
         onClose={() => setFeedbackModalOpen(false)}
         onSubmit={handleFeedbackSubmit}
         imageId={feedbackImageId}
+      />
+
+      {/* Quota Request Modal */}
+      <QuotaRequestModal
+        isOpen={quotaModalOpen}
+        onClose={() => setQuotaModalOpen(false)}
+        onSubmit={async (useCase, email) => {
+          await requestExtraQuota(useCase, email);
+          quotaQuery.refetch();
+        }}
       />
     </div>
   );

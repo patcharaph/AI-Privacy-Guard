@@ -190,3 +190,33 @@ async def get_quota(request: Request):
         "limit": limit,
         "remaining": remaining
     }
+
+
+# Store for quota requests
+quota_requests: List[dict] = []
+
+@router.post("/request-quota")
+async def request_extra_quota(request: Request, use_case: str = Form(...), email: str = Form(default="")):
+    """Request extra quota - collects lead info for BETA feedback."""
+    client_ip = request.client.host if request.client else "unknown"
+    request_id = str(uuid.uuid4())[:8]
+    
+    quota_requests.append({
+        "id": request_id,
+        "ip": client_ip,
+        "use_case": use_case,
+        "email": email,
+        "timestamp": str(uuid.uuid4())  # Simple timestamp placeholder
+    })
+    
+    # Grant 5 extra batches
+    if client_ip in rate_limit_store:
+        rate_limit_store[client_ip] = max(0, rate_limit_store[client_ip] - 5)
+    
+    logger.info(f"Quota request: {request_id} - Use case: {use_case}, Email: {email}")
+    
+    return {
+        "success": True,
+        "message": "Thank you! You've been granted 5 extra batches.",
+        "request_id": request_id
+    }
