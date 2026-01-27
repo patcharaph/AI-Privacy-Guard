@@ -157,8 +157,48 @@ export function PreviewPanel({
               key={result.image_id}
               className="bg-white border border-slate-200 rounded-xl overflow-hidden"
             >
-              {/* Image Preview */}
-              <div className="relative aspect-video bg-slate-100">
+              {/* Image Preview - Click to toggle detections in Edit mode */}
+              <div 
+                className={cn(
+                  "relative aspect-video bg-slate-100",
+                  editMode[result.image_id] && "cursor-pointer"
+                )}
+                onClick={(e) => {
+                  if (!editMode[result.image_id] || !onResultsChange) return;
+                  
+                  // Get click position relative to image
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const img = e.currentTarget.querySelector('img');
+                  if (!img) return;
+                  
+                  const imgRect = img.getBoundingClientRect();
+                  const scaleX = img.naturalWidth / imgRect.width;
+                  const scaleY = img.naturalHeight / imgRect.height;
+                  const clickX = (e.clientX - imgRect.left) * scaleX;
+                  const clickY = (e.clientY - imgRect.top) * scaleY;
+                  
+                  // Find clicked detection
+                  const clickedDet = result.detections.find(d => 
+                    clickX >= d.x && clickX <= d.x + d.width &&
+                    clickY >= d.y && clickY <= d.y + d.height
+                  );
+                  
+                  if (clickedDet) {
+                    const newResults = results.map(r => {
+                      if (r.image_id === result.image_id) {
+                        return {
+                          ...r,
+                          detections: r.detections.map(d => 
+                            d.id === clickedDet.id ? { ...d, enabled: !d.enabled } : d
+                          )
+                        };
+                      }
+                      return r;
+                    });
+                    onResultsChange(newResults);
+                  }
+                }}
+              >
                 <img
                   src={
                     isShowingOriginal && originalUrl
@@ -182,12 +222,10 @@ export function PreviewPanel({
                   {result.detections.filter(d => d.enabled).length}/{result.detections.length} active
                 </div>
 
-                {/* Edit Mode Overlay */}
+                {/* Edit Mode Hint */}
                 {editMode[result.image_id] && (
-                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                    <div className="bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-slate-700">
-                      Click detections to toggle blur ON/OFF
-                    </div>
+                  <div className="absolute bottom-3 left-3 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                    Click on blurred area to toggle
                   </div>
                 )}
               </div>
@@ -214,7 +252,7 @@ export function PreviewPanel({
                           : "border-slate-200 text-slate-600 hover:bg-slate-50"
                       )}
                     >
-                      {editMode[result.image_id] ? "Exit Edit" : "Edit"}
+                      Edit
                     </button>
 
                     {/* Toggle Original/Protected */}
