@@ -11,8 +11,8 @@ class Settings(BaseSettings):
     HOST: str = "0.0.0.0"
     PORT: int = 8000
     
-    # CORS settings
-    CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000"]
+    # CORS settings - allow all origins for BETA (tighten later for production)
+    CORS_ORIGINS: list[str] = ["*"]
     
     # Upload settings
     MAX_FILE_SIZE_MB: int = 10
