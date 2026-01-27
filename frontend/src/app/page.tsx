@@ -283,6 +283,10 @@ export default function Home() {
               originalFiles={files}
               isProcessing={isProcessing}
               onReportMissed={handleReportMissed}
+              blurMode={blurMode}
+              blurIntensity={blurIntensity}
+              emoji={selectedEmoji}
+              onResultsChange={setResults}
             />
           </div>
         </div>

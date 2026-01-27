@@ -3,4 +3,5 @@ export { ControlPanel } from "./ControlPanel";
 export { PreviewPanel } from "./PreviewPanel";
 export { FeedbackModal } from "./FeedbackModal";
 export { QuotaRequestModal } from "./QuotaRequestModal";
+export { ReviewPanel } from "./ReviewPanel";
 export type { BlurMode } from "./ControlPanel";

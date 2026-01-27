@@ -99,12 +99,14 @@ class PrivacyDetector:
             height = min(height + 2 * margin_y, h - y)
             
             detections.append(BoundingBox(
+                id=f"face_{len(detections)}",
                 x=x,
                 y=y,
                 width=width,
                 height=height,
                 confidence=CONFIDENCE_THRESHOLD,
-                detection_type=DetectionType.FACE
+                detection_type=DetectionType.FACE,
+                enabled=True
             ))
         
         return detections
@@ -146,12 +148,14 @@ class PrivacyDetector:
                 
                 if plate_width > 0 and plate_height > 0:
                     detections.append(BoundingBox(
+                        id=f"plate_{len(detections)}",
                         x=plate_x,
                         y=plate_y,
                         width=plate_width,
                         height=plate_height,
                         confidence=0.8,
-                        detection_type=DetectionType.LICENSE_PLATE
+                        detection_type=DetectionType.LICENSE_PLATE,
+                        enabled=True
                     ))
         except Exception as e:
             logger.error(f"Error during license plate detection: {e}")

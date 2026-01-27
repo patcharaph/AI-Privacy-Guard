@@ -15,12 +15,14 @@ class DetectionType(str, Enum):
 
 
 class BoundingBox(BaseModel):
+    id: str = ""  # Unique ID for toggle functionality
     x: int
     y: int
     width: int
     height: int
     confidence: float
     detection_type: DetectionType
+    enabled: bool = True  # For Review & Fix mode
 
 
 class ProcessingOptions(BaseModel):
@@ -34,6 +36,7 @@ class ProcessingOptions(BaseModel):
 class ProcessedImageResult(BaseModel):
     image_id: str
     original_filename: str
+    original_image_base64: str  # For Review & Fix mode
     processed_image_base64: str
     detections: list[BoundingBox]
     processing_time_ms: float

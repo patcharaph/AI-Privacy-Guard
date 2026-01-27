@@ -85,6 +85,9 @@ class ImageProcessor:
         image = self.decode_image(image_bytes)
         logger.info(f"Processing image {filename} ({image.shape[1]}x{image.shape[0]})")
         
+        # Encode original image for Review & Fix mode
+        original_base64 = self.encode_image(image)
+        
         # Run detection
         detections = detector.detect_all(
             image,
@@ -111,6 +114,7 @@ class ImageProcessor:
         return ProcessedImageResult(
             image_id=image_id,
             original_filename=filename,
+            original_image_base64=original_base64,
             processed_image_base64=processed_base64,
             detections=detections,
             processing_time_ms=round(processing_time, 2)

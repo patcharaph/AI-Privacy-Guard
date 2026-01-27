@@ -1,17 +1,20 @@
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export interface BoundingBox {
+  id: string;
   x: number;
   y: number;
   width: number;
   height: number;
   confidence: number;
   detection_type: "face" | "license_plate";
+  enabled: boolean;
 }
 
 export interface ProcessedImageResult {
   image_id: string;
   original_filename: string;
+  original_image_base64: string;
   processed_image_base64: string;
   detections: BoundingBox[];
   processing_time_ms: number;

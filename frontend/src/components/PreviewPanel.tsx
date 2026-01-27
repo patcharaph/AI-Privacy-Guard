@@ -20,6 +20,10 @@ interface PreviewPanelProps {
   originalFiles: File[];
   isProcessing: boolean;
   onReportMissed: (imageId: string) => void;
+  blurMode?: "gaussian" | "pixelation" | "emoji";
+  blurIntensity?: number;
+  emoji?: string;
+  onResultsChange?: (results: ProcessedImageResult[]) => void;
 }
 
 export function PreviewPanel({
@@ -27,8 +31,13 @@ export function PreviewPanel({
   originalFiles,
   isProcessing,
   onReportMissed,
+  blurMode = "gaussian",
+  blurIntensity = 80,
+  emoji = "😀",
+  onResultsChange,
 }: PreviewPanelProps) {
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
+  const [editMode, setEditMode] = useState<Record<string, boolean>>({});
   const [downloadingZip, setDownloadingZip] = useState(false);
 
   const toggleOriginal = (imageId: string) => {
@@ -170,9 +179,17 @@ export function PreviewPanel({
 
                 {/* Detection Count Badge */}
                 <div className="absolute top-3 right-3 px-2.5 py-1 bg-slate-900/70 text-white text-xs font-medium rounded-full">
-                  {result.detections.length} detection
-                  {result.detections.length !== 1 ? "s" : ""}
+                  {result.detections.filter(d => d.enabled).length}/{result.detections.length} active
                 </div>
+
+                {/* Edit Mode Overlay */}
+                {editMode[result.image_id] && (
+                  <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                    <div className="bg-white/90 px-4 py-2 rounded-lg text-sm font-medium text-slate-700">
+                      Click detections to toggle blur ON/OFF
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Image Info & Actions */}
@@ -187,6 +204,19 @@ export function PreviewPanel({
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Edit Mode Toggle */}
+                    <button
+                      onClick={() => setEditMode(prev => ({ ...prev, [result.image_id]: !prev[result.image_id] }))}
+                      className={cn(
+                        "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors",
+                        editMode[result.image_id]
+                          ? "border-primary-300 bg-primary-50 text-primary-700"
+                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {editMode[result.image_id] ? "Exit Edit" : "Edit"}
+                    </button>
+
                     {/* Toggle Original/Protected */}
                     <button
                       onClick={() => toggleOriginal(result.image_id)}
@@ -221,22 +251,40 @@ export function PreviewPanel({
                   </div>
                 </div>
 
-                {/* Detection Details */}
+                {/* Detection Details - Clickable in Edit Mode */}
                 {result.detections.length > 0 && (
                   <div className="flex flex-wrap gap-2 mb-3">
                     {result.detections.map((det, idx) => (
-                      <span
-                        key={idx}
+                      <button
+                        key={det.id || idx}
+                        onClick={() => {
+                          if (editMode[result.image_id] && onResultsChange) {
+                            const newResults = results.map(r => {
+                              if (r.image_id === result.image_id) {
+                                return {
+                                  ...r,
+                                  detections: r.detections.map(d => 
+                                    d.id === det.id ? { ...d, enabled: !d.enabled } : d
+                                  )
+                                };
+                              }
+                              return r;
+                            });
+                            onResultsChange(newResults);
+                          }
+                        }}
                         className={cn(
-                          "px-2 py-0.5 text-xs font-medium rounded-full",
+                          "px-2 py-0.5 text-xs font-medium rounded-full transition-all",
                           det.detection_type === "face"
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-purple-100 text-purple-700"
+                            ? det.enabled ? "bg-blue-100 text-blue-700" : "bg-slate-100 text-slate-400 line-through"
+                            : det.enabled ? "bg-purple-100 text-purple-700" : "bg-slate-100 text-slate-400 line-through",
+                          editMode[result.image_id] && "cursor-pointer hover:ring-2 ring-primary-300"
                         )}
+                        disabled={!editMode[result.image_id]}
                       >
                         {det.detection_type === "face" ? "👤 Face" : "🚗 Plate"}{" "}
-                        ({(det.confidence * 100).toFixed(0)}%)
-                      </span>
+                        {det.enabled ? "ON" : "OFF"}
+                      </button>
                     ))}
                   </div>
                 )}
