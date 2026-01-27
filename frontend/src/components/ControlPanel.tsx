@@ -14,8 +14,19 @@ interface ControlPanelProps {
   onDetectFacesChange: (detect: boolean) => void;
   detectPlates: boolean;
   onDetectPlatesChange: (detect: boolean) => void;
+  selectedEmoji?: string;
+  onEmojiChange?: (emoji: string) => void;
   disabled?: boolean;
 }
+
+const EMOJI_OPTIONS = [
+  { value: "😀", label: "Smile" },
+  { value: "😎", label: "Cool" },
+  { value: "🙈", label: "Monkey" },
+  { value: "⭐", label: "Star" },
+  { value: "❤️", label: "Heart" },
+  { value: "🔒", label: "Lock" },
+];
 
 const blurModes: { value: BlurMode; label: string; icon: React.ReactNode }[] = [
   { value: "gaussian", label: "Gaussian Blur", icon: <Eye className="w-4 h-4" /> },
@@ -32,6 +43,8 @@ export function ControlPanel({
   onDetectFacesChange,
   detectPlates,
   onDetectPlatesChange,
+  selectedEmoji = "😀",
+  onEmojiChange,
   disabled = false,
 }: ControlPanelProps) {
   return (
@@ -61,6 +74,34 @@ export function ControlPanel({
           ))}
         </div>
       </div>
+
+      {/* Emoji Selection (only show when emoji mode is selected) */}
+      {blurMode === "emoji" && (
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-3">
+            Choose Emoji
+          </label>
+          <div className="grid grid-cols-6 gap-2">
+            {EMOJI_OPTIONS.map((emoji) => (
+              <button
+                key={emoji.value}
+                onClick={() => onEmojiChange?.(emoji.value)}
+                disabled={disabled}
+                className={cn(
+                  "flex items-center justify-center p-3 rounded-lg border-2 text-2xl transition-all",
+                  selectedEmoji === emoji.value
+                    ? "border-primary-500 bg-primary-50"
+                    : "border-slate-200 hover:border-slate-300",
+                  disabled && "opacity-50 cursor-not-allowed"
+                )}
+                title={emoji.label}
+              >
+                {emoji.value}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Blur Intensity Slider */}
       <div>

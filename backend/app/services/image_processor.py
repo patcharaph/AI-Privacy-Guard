@@ -99,7 +99,8 @@ class ImageProcessor:
             image,
             detections,
             options.blur_mode,
-            options.blur_intensity
+            options.blur_intensity,
+            options.emoji
         )
         
         # Encode result

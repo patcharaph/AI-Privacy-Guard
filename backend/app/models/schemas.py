@@ -28,6 +28,7 @@ class ProcessingOptions(BaseModel):
     blur_intensity: int = Field(default=80, ge=0, le=100)
     detect_faces: bool = True
     detect_plates: bool = True
+    emoji: str = "😀"
 
 
 class ProcessedImageResult(BaseModel):

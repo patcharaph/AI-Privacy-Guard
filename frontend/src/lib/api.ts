@@ -31,6 +31,7 @@ export interface ProcessingOptions {
   blur_intensity: number;
   detect_faces: boolean;
   detect_plates: boolean;
+  emoji?: string;
 }
 
 export interface FeedbackRequest {
@@ -59,6 +60,9 @@ export async function processImages(
   formData.append("blur_intensity", options.blur_intensity.toString());
   formData.append("detect_faces", options.detect_faces.toString());
   formData.append("detect_plates", options.detect_plates.toString());
+  if (options.emoji) {
+    formData.append("emoji", options.emoji);
+  }
 
   const response = await fetch(`${API_BASE_URL}/api/process`, {
     method: "POST",

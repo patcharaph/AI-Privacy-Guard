@@ -22,6 +22,7 @@ export default function Home() {
   const [blurIntensity, setBlurIntensity] = useState(80);
   const [detectFaces, setDetectFaces] = useState(true);
   const [detectPlates, setDetectPlates] = useState(true);
+  const [selectedEmoji, setSelectedEmoji] = useState("😀");
 
   // Results state
   const [results, setResults] = useState<ProcessedImageResult[]>([]);
@@ -49,6 +50,7 @@ export default function Home() {
         blur_intensity: blurIntensity,
         detect_faces: detectFaces,
         detect_plates: detectPlates,
+        emoji: blurMode === "emoji" ? selectedEmoji : undefined,
       });
     },
     onSuccess: (data) => {
@@ -163,6 +165,8 @@ export default function Home() {
                 onDetectFacesChange={setDetectFaces}
                 detectPlates={detectPlates}
                 onDetectPlatesChange={setDetectPlates}
+                selectedEmoji={selectedEmoji}
+                onEmojiChange={setSelectedEmoji}
                 disabled={isProcessing}
               />
             </section>

@@ -62,35 +62,48 @@ class PrivacyDetector:
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         h, w = image.shape[:2]
         
-        # Detect faces
+        # BETA "Golden" parameters
+        MIN_FACE_SIZE = 36  # px
+        CONFIDENCE_THRESHOLD = 0.5
+        ASPECT_RATIO_MIN = 0.75
+        ASPECT_RATIO_MAX = 1.3
+        MARGIN = 0.25  # 25% padding
+        
+        # Detect faces with optimized parameters
         faces = self.face_cascade.detectMultiScale(
             gray,
             scaleFactor=1.1,
-            minNeighbors=5,
-            minSize=(30, 30),
+            minNeighbors=4,  # Balanced between sensitivity and false positives
+            minSize=(MIN_FACE_SIZE, MIN_FACE_SIZE),
             flags=cv2.CASCADE_SCALE_IMAGE
         )
         
         for (x, y, width, height) in faces:
+            # Filter by aspect ratio (faces should be roughly square)
+            aspect_ratio = width / height if height > 0 else 0
+            if aspect_ratio < ASPECT_RATIO_MIN or aspect_ratio > ASPECT_RATIO_MAX:
+                continue
+            
             # Ensure coordinates are within image bounds
             x = max(0, x)
             y = max(0, y)
             width = min(width, w - x)
             height = min(height, h - y)
             
-            # Add padding for better coverage
-            padding = int(min(width, height) * 0.1)
-            x = max(0, x - padding)
-            y = max(0, y - padding)
-            width = min(width + 2 * padding, w - x)
-            height = min(height + 2 * padding, h - y)
+            # Add margin (25%) for better coverage
+            margin_x = int(width * MARGIN)
+            margin_y = int(height * MARGIN)
+            x = max(0, x - margin_x)
+            y = max(0, y - margin_y)
+            width = min(width + 2 * margin_x, w - x)
+            height = min(height + 2 * margin_y, h - y)
             
             detections.append(BoundingBox(
                 x=x,
                 y=y,
                 width=width,
                 height=height,
-                confidence=0.9,  # Haar Cascade doesn't provide confidence scores
+                confidence=CONFIDENCE_THRESHOLD,
                 detection_type=DetectionType.FACE
             ))
         

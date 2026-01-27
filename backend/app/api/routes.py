@@ -41,7 +41,8 @@ async def process_images(
     blur_mode: str = Form(default="gaussian"),
     blur_intensity: int = Form(default=80),
     detect_faces: bool = Form(default=True),
-    detect_plates: bool = Form(default=True)
+    detect_plates: bool = Form(default=True),
+    emoji: str = Form(default="😀")
 ):
     """
     Process uploaded images with privacy blur.
@@ -51,6 +52,7 @@ async def process_images(
     - **blur_intensity**: 0-100 (default 80)
     - **detect_faces**: Enable face detection (default True)
     - **detect_plates**: Enable license plate detection (default True)
+    - **emoji**: Emoji to use for overlay (default 😀)
     """
     # Validate batch size
     if len(files) > settings.MAX_BATCH_SIZE:
@@ -88,7 +90,8 @@ async def process_images(
         blur_mode=blur_mode_enum,
         blur_intensity=max(0, min(100, blur_intensity)),
         detect_faces=detect_faces,
-        detect_plates=detect_plates
+        detect_plates=detect_plates,
+        emoji=emoji
     )
     
     # Read and validate all files

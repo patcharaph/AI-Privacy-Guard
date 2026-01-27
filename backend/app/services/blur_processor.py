@@ -86,7 +86,7 @@ class BlurProcessor:
     
     @staticmethod
     def apply_emoji_overlay(image: np.ndarray, bbox: BoundingBox, 
-                           intensity: int = 80) -> np.ndarray:
+                           intensity: int = 80, emoji: str = "😀") -> np.ndarray:
         """Apply emoji overlay to a region of the image."""
         x, y, w, h = bbox.x, bbox.y, bbox.width, bbox.height
         
@@ -108,19 +108,22 @@ class BlurProcessor:
         center_y = y + h // 2
         radius = min(w, h) // 2
         
-        # Choose color based on detection type
-        if bbox.detection_type.value == "face":
-            # Yellow smiley face color
-            color = (0, 200, 255)  # BGR - Yellow/Orange
-        else:
-            # Blue for license plates
-            color = (255, 150, 0)  # BGR - Blue
+        # Choose color based on emoji type
+        emoji_colors = {
+            "😀": (0, 200, 255),   # Yellow - Smile
+            "😎": (0, 200, 255),   # Yellow - Cool
+            "🙈": (139, 90, 43),   # Brown - Monkey
+            "⭐": (0, 215, 255),    # Gold - Star
+            "❤️": (0, 0, 255),      # Red - Heart
+            "🔒": (255, 150, 0),   # Blue - Lock
+        }
+        color = emoji_colors.get(emoji, (0, 200, 255))
         
         # Draw filled circle
         cv2.circle(overlay, (center_x, center_y), radius, color, -1)
         
-        # Add simple face features for face detection
-        if bbox.detection_type.value == "face":
+        # Add features based on emoji type
+        if emoji in ["😀", "😎"]:
             # Eyes
             eye_radius = max(2, radius // 8)
             eye_y = center_y - radius // 4
@@ -129,12 +132,42 @@ class BlurProcessor:
             cv2.circle(overlay, (left_eye_x, eye_y), eye_radius, (0, 0, 0), -1)
             cv2.circle(overlay, (right_eye_x, eye_y), eye_radius, (0, 0, 0), -1)
             
+            if emoji == "😎":
+                # Sunglasses for cool emoji
+                cv2.line(overlay, (left_eye_x - eye_radius*2, eye_y), 
+                        (right_eye_x + eye_radius*2, eye_y), (0, 0, 0), max(2, radius // 10))
+            
             # Smile
             smile_y = center_y + radius // 4
             cv2.ellipse(overlay, (center_x, smile_y), 
                        (radius // 3, radius // 6), 0, 0, 180, (0, 0, 0), 2)
-        else:
-            # Lock icon for license plates
+        elif emoji == "🙈":
+            # Monkey covering eyes
+            eye_y = center_y - radius // 6
+            cv2.ellipse(overlay, (center_x, eye_y), 
+                       (radius // 2, radius // 4), 0, 0, 360, (80, 50, 30), -1)
+        elif emoji == "⭐":
+            # Star shape (simplified as circle with points)
+            pts = []
+            for i in range(5):
+                angle = i * 72 - 90
+                px = int(center_x + radius * 0.9 * np.cos(np.radians(angle)))
+                py = int(center_y + radius * 0.9 * np.sin(np.radians(angle)))
+                pts.append([px, py])
+                angle2 = angle + 36
+                px2 = int(center_x + radius * 0.4 * np.cos(np.radians(angle2)))
+                py2 = int(center_y + radius * 0.4 * np.sin(np.radians(angle2)))
+                pts.append([px2, py2])
+            cv2.fillPoly(overlay, [np.array(pts)], color)
+        elif emoji == "❤️":
+            # Heart shape (simplified)
+            cv2.circle(overlay, (center_x - radius//3, center_y - radius//4), radius//2, color, -1)
+            cv2.circle(overlay, (center_x + radius//3, center_y - radius//4), radius//2, color, -1)
+            pts = np.array([[center_x - radius, center_y], [center_x, center_y + radius], 
+                           [center_x + radius, center_y]], np.int32)
+            cv2.fillPoly(overlay, [pts], color)
+        elif emoji == "🔒":
+            # Lock icon
             lock_size = radius // 2
             lock_x = center_x - lock_size // 2
             lock_y = center_y - lock_size // 4
@@ -151,7 +184,7 @@ class BlurProcessor:
     
     @classmethod
     def process_image(cls, image: np.ndarray, detections: List[BoundingBox],
-                     blur_mode: BlurMode, intensity: int = 80) -> np.ndarray:
+                     blur_mode: BlurMode, intensity: int = 80, emoji: str = "😀") -> np.ndarray:
         """Process an image by applying blur to all detected regions."""
         result = image.copy()
         
@@ -161,7 +194,7 @@ class BlurProcessor:
             elif blur_mode == BlurMode.PIXELATION:
                 result = cls.apply_pixelation(result, detection, intensity)
             elif blur_mode == BlurMode.EMOJI:
-                result = cls.apply_emoji_overlay(result, detection, intensity)
+                result = cls.apply_emoji_overlay(result, detection, intensity, emoji)
         
         return result
 
