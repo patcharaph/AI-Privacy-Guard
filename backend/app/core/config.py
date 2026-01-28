@@ -28,9 +28,14 @@ class Settings(BaseSettings):
     
     # AI Model settings
     YOLO_MODEL: str = "yolov8n.pt"
-    PLATE_YOLO_MODEL: str = "yolov8n-license-plate.pt"
+    PLATE_YOLO_MODEL: str = "yolov8s-license-plate.pt"
+    FACE_MODEL: str = "retinaface_mnet025_v1"
     FACE_DETECTION_CONFIDENCE: float = 0.5
     PLATE_DETECTION_CONFIDENCE: float = 0.5
+    PLATE_MIN_CONFIDENCE: float = 0.6
+    PLATE_MIN_ASPECT: float = 2.0
+    PLATE_MAX_ASPECT: float = 6.0
+    PLATE_MIN_Y_FRAC: float = 0.5
     
     # Default blur settings
     DEFAULT_BLUR_INTENSITY: int = 80

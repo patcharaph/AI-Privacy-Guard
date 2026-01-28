@@ -1,16 +1,16 @@
 import cv2
 import numpy as np
 import os
-from typing import List, Tuple
+from typing import List
 import logging
 
 from app.models.schemas import BoundingBox, DetectionType
 from app.core.config import settings
 
 try:
-    import mediapipe as mp
+    from insightface.model_zoo import get_model as get_insightface_model
 except Exception:  # pragma: no cover - optional dependency at runtime
-    mp = None
+    get_insightface_model = None
 
 try:
     from ultralytics import YOLO
@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 
 
 class PrivacyDetector:
-    """Handles face and license plate detection using MediaPipe + YOLO (CPU)."""
+    """Handles face and license plate detection using RetinaFace + YOLO (CPU)."""
 
     _instance = None
     _initialized = False
@@ -37,29 +37,26 @@ class PrivacyDetector:
 
         logger.info("Initializing AI detection models...")
 
-        # Initialize MediaPipe Face Detection
+        # RetinaFace (MobileNet) via insightface model zoo
         self.face_detector_loaded = False
-        if mp is None:
-            logger.warning("MediaPipe not available, face detection will fall back to Haar Cascade")
-            self.face_detector = None
+        self.face_model = None
+        if get_insightface_model is None:
+            logger.warning("InsightFace not available, face detection will fall back to Haar Cascade")
         else:
             try:
-                self.face_detector = mp.solutions.face_detection.FaceDetection(
-                    model_selection=0,
-                    min_detection_confidence=max(0.1, settings.FACE_DETECTION_CONFIDENCE * 0.6),
-                )
+                self.face_model = get_insightface_model(settings.FACE_MODEL)
+                self.face_model.prepare(ctx_id=0, det_size=(640, 640))
                 self.face_detector_loaded = True
-                logger.info("MediaPipe Face Detection loaded successfully")
+                logger.info("RetinaFace (MobileNet) loaded successfully")
             except Exception as e:
-                self.face_detector = None
-                logger.warning(f"Failed to initialize MediaPipe Face Detection: {e}")
+                logger.warning(f"Failed to load RetinaFace model: {e}")
 
         # Fallback Haar Cascade for Face Detection
         cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
         self.face_cascade = cv2.CascadeClassifier(cascade_path)
         self.face_cascade_loaded = not self.face_cascade.empty()
 
-        # Initialize YOLO for license plate detection
+        # YOLOv8s for license plate detection
         self.plate_detector_loaded = False
         self.plate_model = None
         if YOLO is None:
@@ -86,7 +83,7 @@ class PrivacyDetector:
         logger.info("AI detection models initialized successfully")
 
     def detect_faces(self, image: np.ndarray, sensitivity: int = 60) -> List[BoundingBox]:
-        """Detect faces in an image using MediaPipe (fallback to Haar Cascade)."""
+        """Detect faces using RetinaFace (fallback to Haar Cascade)."""
         detections: List[BoundingBox] = []
 
         h, w = image.shape[:2]
@@ -96,34 +93,33 @@ class PrivacyDetector:
         min_conf = 0.85 - (sensitivity / 100) * 0.35  # 0.85..0.5
         min_conf = max(0.3, min(0.9, min_conf))
 
-        if self.face_detector_loaded and self.face_detector is not None:
-            rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-            results = self.face_detector.process(rgb)
-            if results and results.detections:
-                for det in results.detections:
-                    score = det.score[0] if det.score else 0
-                    if score < min_conf:
-                        continue
-                    box = det.location_data.relative_bounding_box
-                    x = int(box.xmin * w)
-                    y = int(box.ymin * h)
-                    width = int(box.width * w)
-                    height = int(box.height * h)
-                    x = max(0, x)
-                    y = max(0, y)
-                    width = min(width, w - x)
-                    height = min(height, h - y)
-                    detections.append(BoundingBox(
-                        id=f"face_{len(detections)}",
-                        x=x,
-                        y=y,
-                        width=width,
-                        height=height,
-                        confidence=score,
-                        detection_type=DetectionType.FACE,
-                        enabled=True
-                    ))
-            return detections
+        if self.face_detector_loaded and self.face_model is not None:
+            try:
+                bboxes, _ = self.face_model.detect(image, threshold=min_conf)
+                if bboxes is not None:
+                    for i in range(bboxes.shape[0]):
+                        x1, y1, x2, y2, score = bboxes[i].tolist()
+                        if score < min_conf:
+                            continue
+                        x = max(0, int(x1))
+                        y = max(0, int(y1))
+                        width = min(int(x2 - x1), w - x)
+                        height = min(int(y2 - y1), h - y)
+                        if width <= 0 or height <= 0:
+                            continue
+                        detections.append(BoundingBox(
+                            id=f"face_{len(detections)}",
+                            x=x,
+                            y=y,
+                            width=width,
+                            height=height,
+                            confidence=float(score),
+                            detection_type=DetectionType.FACE,
+                            enabled=True
+                        ))
+                return detections
+            except Exception as e:
+                logger.error(f"RetinaFace detection failed: {e}")
 
         # Fallback to Haar Cascade
         if not self.face_cascade_loaded:
@@ -155,15 +151,15 @@ class PrivacyDetector:
         return detections
 
     def detect_license_plates(self, image: np.ndarray, sensitivity: int = 60) -> List[BoundingBox]:
-        """Detect license plates using YOLO (fallback to Haar Cascade)."""
+        """Detect license plates using YOLOv8s (fallback to Haar Cascade)."""
         detections: List[BoundingBox] = []
 
         h, w = image.shape[:2]
         sensitivity = max(0, min(100, sensitivity))
 
         if self.plate_detector_loaded and self.plate_model is not None:
-            conf = 0.65 - (sensitivity / 100) * 0.35  # 0.65..0.3
-            conf = max(0.2, min(0.8, conf))
+            conf = 0.7 - (sensitivity / 100) * 0.3  # 0.7..0.4
+            conf = max(settings.PLATE_MIN_CONFIDENCE, min(0.9, conf))
             try:
                 results = self.plate_model.predict(
                     source=image,
@@ -183,6 +179,14 @@ class PrivacyDetector:
                             if width <= 0 or height <= 0:
                                 continue
                             score = float(boxes.conf[i]) if boxes.conf is not None else conf
+                            if score < settings.PLATE_MIN_CONFIDENCE:
+                                continue
+                            aspect = width / height if height > 0 else 0
+                            if aspect < settings.PLATE_MIN_ASPECT or aspect > settings.PLATE_MAX_ASPECT:
+                                continue
+                            center_y = y + height / 2
+                            if center_y < h * settings.PLATE_MIN_Y_FRAC:
+                                continue
                             detections.append(BoundingBox(
                                 id=f"plate_{len(detections)}",
                                 x=x,
