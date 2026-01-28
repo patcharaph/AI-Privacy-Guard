@@ -90,6 +90,18 @@ export function ReviewPanel({
       detections.forEach((detection) => {
         const { x, y, width, height, enabled, detection_type } = detection;
 
+        // Draw subtle emoji hint for disabled detections
+        if (!enabled && blurMode === "emoji") {
+          const fontSize = Math.min(width, height);
+          ctx.save();
+          ctx.globalAlpha = 0.25;
+          ctx.font = `${fontSize}px Arial`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(emoji, x + width / 2, y + height / 2);
+          ctx.restore();
+        }
+
         // Draw border
         ctx.strokeStyle = enabled ? "#22c55e" : "#ef4444";
         ctx.lineWidth = 3;
@@ -99,14 +111,15 @@ export function ReviewPanel({
 
         // Draw label
         const label = detection_type === "face" ? "Face" : "Plate";
-        const status = enabled ? "ON" : "OFF";
-        ctx.fillStyle = enabled ? "#22c55e" : "#ef4444";
-        ctx.fillRect(x, y - 24, 70, 24);
-        ctx.fillStyle = "white";
+        const labelText = enabled ? `${label}: ON` : "Disabled";
         ctx.font = "12px Arial";
+        const labelWidth = Math.ceil(ctx.measureText(labelText).width) + 12;
+        ctx.fillStyle = enabled ? "#22c55e" : "#ef4444";
+        ctx.fillRect(x, y - 22, labelWidth, 22);
+        ctx.fillStyle = "white";
         ctx.textAlign = "left";
         ctx.textBaseline = "middle";
-        ctx.fillText(`${label}: ${status}`, x + 4, y - 12);
+        ctx.fillText(labelText, x + 6, y - 11);
       });
     }
   }, [detections, showOriginal, editMode, blurMode, emoji]);

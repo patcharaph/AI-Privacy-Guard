@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useState } from "react";
-import { Upload, X, Image as ImageIcon, AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Upload, X, AlertCircle } from "lucide-react";
 import { cn, formatFileSize, validateFiles } from "@/lib/utils";
 
 interface UploadZoneProps {
@@ -19,6 +19,7 @@ export function UploadZone({
 }: UploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
   const [errors, setErrors] = useState<string[]>([]);
+  const [primaryPreviewUrl, setPrimaryPreviewUrl] = useState<string | null>(null);
 
   const handleFiles = useCallback(
     (newFiles: FileList | File[]) => {
@@ -78,6 +79,21 @@ export function UploadZone({
     setErrors([]);
   }, [onFilesChange]);
 
+
+  useEffect(() => {
+    if (files.length == 0) {
+      setPrimaryPreviewUrl(null);
+      return;
+    }
+
+    const url = URL.createObjectURL(files[0]);
+    setPrimaryPreviewUrl(url);
+
+    return () => {
+      URL.revokeObjectURL(url);
+    };
+  }, [files]);
+
   return (
     <div className="space-y-4">
       {/* Drop Zone */}
@@ -115,6 +131,26 @@ export function UploadZone({
           </div>
         </div>
       </div>
+
+
+      {primaryPreviewUrl && (
+        <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+          <img
+            src={primaryPreviewUrl}
+            alt={files[0]?.name || "Uploaded preview"}
+            className="w-full max-h-[420px] object-cover"
+          />
+          {!disabled && (
+            <button
+              onClick={() => (files.length <= 1 ? clearAll() : removeFile(0))}
+              className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-slate-700 shadow-md hover:bg-white"
+              aria-label="Remove image"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Privacy Notice */}
       <div className="flex items-start gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
@@ -157,7 +193,7 @@ export function UploadZone({
       )}
 
       {/* File List */}
-      {files.length > 0 && (
+      {files.length > 1 && (
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-slate-700">

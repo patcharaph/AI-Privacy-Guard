@@ -22,9 +22,9 @@ interface ControlPanelProps {
 const EMOJI_OPTIONS = [
   { value: "😀", label: "Smile" },
   { value: "😎", label: "Cool" },
-  { value: "🙈", label: "Monkey" },
+  { value: "🤖", label: "Robot" },
+  { value: "🐵", label: "Monkey" },
   { value: "⭐", label: "Star" },
-  { value: "❤️", label: "Heart" },
   { value: "🔒", label: "Lock" },
 ];
 
@@ -88,7 +88,7 @@ export function ControlPanel({
                 onClick={() => onEmojiChange?.(emoji.value)}
                 disabled={disabled}
                 className={cn(
-                  "flex items-center justify-center p-3 rounded-lg border-2 text-2xl transition-all",
+                  "flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 text-2xl transition-all",
                   selectedEmoji === emoji.value
                     ? "border-primary-500 bg-primary-50"
                     : "border-slate-200 hover:border-slate-300",
@@ -96,7 +96,10 @@ export function ControlPanel({
                 )}
                 title={emoji.label}
               >
-                {emoji.value}
+                <span aria-hidden="true">{emoji.value}</span>
+                <span className="text-[10px] font-medium text-slate-500">
+                  {emoji.label}
+                </span>
               </button>
             ))}
           </div>
