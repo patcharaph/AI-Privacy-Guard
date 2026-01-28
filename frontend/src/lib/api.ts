@@ -34,7 +34,9 @@ export interface ProcessingOptions {
   blur_intensity: number;
   detect_faces: boolean;
   detect_plates: boolean;
+  detection_sensitivity?: number;
   emoji?: string;
+  emoji_key?: string;
 }
 
 export interface FeedbackRequest {
@@ -63,8 +65,17 @@ export async function processImages(
   formData.append("blur_intensity", options.blur_intensity.toString());
   formData.append("detect_faces", options.detect_faces.toString());
   formData.append("detect_plates", options.detect_plates.toString());
+  if (options.detection_sensitivity !== undefined) {
+    formData.append(
+      "detection_sensitivity",
+      options.detection_sensitivity.toString()
+    );
+  }
   if (options.emoji) {
     formData.append("emoji", options.emoji);
+  }
+  if (options.emoji_key) {
+    formData.append("emoji_key", options.emoji_key);
   }
 
   const response = await fetch(`${API_BASE_URL}/api/process`, {

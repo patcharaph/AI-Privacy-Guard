@@ -17,6 +17,16 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
+# Map ASCII-safe emoji keys to canonical emoji
+EMOJI_KEY_MAP = {
+    "smile": "\U0001F600",
+    "cool": "\U0001F60E",
+    "robot": "\U0001F916",
+    "monkey": "\U0001F435",
+    "star": "\u2B50",
+    "lock": "\U0001F512",
+}
+
 # In-memory feedback storage (for BETA - would use PostgreSQL in production)
 feedback_store: List[dict] = []
 
@@ -42,7 +52,9 @@ async def process_images(
     blur_intensity: int = Form(default=80),
     detect_faces: bool = Form(default=True),
     detect_plates: bool = Form(default=True),
-    emoji: str = Form(default="😀")
+    detection_sensitivity: int = Form(default=60),
+    emoji: str = Form(default="\U0001F600"),
+    emoji_key: Optional[str] = Form(default=None)
 ):
     """
     Process uploaded images with privacy blur.
@@ -52,6 +64,7 @@ async def process_images(
     - **blur_intensity**: 0-100 (default 80)
     - **detect_faces**: Enable face detection (default True)
     - **detect_plates**: Enable license plate detection (default True)
+    - **detection_sensitivity**: 0-100 (lower = stricter, fewer detections)
     - **emoji**: Emoji to use for overlay (default 😀)
     """
     # Validate batch size
@@ -85,6 +98,9 @@ async def process_images(
     except ValueError:
         blur_mode_enum = BlurMode.GAUSSIAN
     
+    if emoji_key and emoji_key in EMOJI_KEY_MAP:
+        emoji = EMOJI_KEY_MAP[emoji_key]
+
     # Log received emoji for debugging
     logger.info(f"Received emoji: '{emoji}' (repr: {repr(emoji)})")
     
@@ -94,7 +110,9 @@ async def process_images(
         blur_intensity=max(0, min(100, blur_intensity)),
         detect_faces=detect_faces,
         detect_plates=detect_plates,
-        emoji=emoji
+        detection_sensitivity=max(0, min(100, detection_sensitivity)),
+        emoji=emoji,
+        emoji_key=emoji_key
     )
     
     # Read and validate all files

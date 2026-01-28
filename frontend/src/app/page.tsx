@@ -14,15 +14,25 @@ import {
 import { processImages, submitFeedback, getQuota, requestExtraQuota, ProcessedImageResult } from "@/lib/api";
 
 export default function Home() {
+  const EMOJI_KEY_BY_VALUE: Record<string, string> = {
+    "\u{1F600}": "smile",
+    "\u{1F60E}": "cool",
+    "\u{1F916}": "robot",
+    "\u{1F435}": "monkey",
+    "\u{2B50}": "star",
+    "\u{1F512}": "lock",
+  };
+
   // Upload state
   const [files, setFiles] = useState<File[]>([]);
 
   // Control state
   const [blurMode, setBlurMode] = useState<BlurMode>("gaussian");
   const [blurIntensity, setBlurIntensity] = useState(80);
+  const [detectionSensitivity, setDetectionSensitivity] = useState(60);
   const [detectFaces, setDetectFaces] = useState(true);
   const [detectPlates, setDetectPlates] = useState(true);
-  const [selectedEmoji, setSelectedEmoji] = useState("😀");
+  const [selectedEmoji, setSelectedEmoji] = useState("\u{1F600}");
 
   // Results state
   const [results, setResults] = useState<ProcessedImageResult[]>([]);
@@ -50,7 +60,10 @@ export default function Home() {
         blur_intensity: blurIntensity,
         detect_faces: detectFaces,
         detect_plates: detectPlates,
+        detection_sensitivity: detectionSensitivity,
         emoji: blurMode === "emoji" ? selectedEmoji : undefined,
+        emoji_key:
+          blurMode === "emoji" ? EMOJI_KEY_BY_VALUE[selectedEmoji] : undefined,
       });
     },
     onSuccess: (data) => {
@@ -146,7 +159,7 @@ export default function Home() {
               <UploadZone
                 files={files}
                 onFilesChange={setFiles}
-                maxFiles={10}
+                maxFiles={5}
                 disabled={isProcessing}
               />
             </section>
@@ -161,6 +174,8 @@ export default function Home() {
                 onBlurModeChange={setBlurMode}
                 blurIntensity={blurIntensity}
                 onBlurIntensityChange={setBlurIntensity}
+                detectionSensitivity={detectionSensitivity}
+                onDetectionSensitivityChange={setDetectionSensitivity}
                 detectFaces={detectFaces}
                 onDetectFacesChange={setDetectFaces}
                 detectPlates={detectPlates}
@@ -280,12 +295,8 @@ export default function Home() {
             </h2>
             <PreviewPanel
               results={results}
-              originalFiles={files}
               isProcessing={isProcessing}
               onReportMissed={handleReportMissed}
-              blurMode={blurMode}
-              blurIntensity={blurIntensity}
-              emoji={selectedEmoji}
               onResultsChange={setResults}
             />
           </div>
@@ -300,7 +311,7 @@ export default function Home() {
               AI Privacy Guard BETA - Protecting your visual privacy
             </p>
             <div className="flex items-center gap-4 text-sm text-slate-500">
-              <span>Max 10 images per batch</span>
+              <span>Max 5 images per batch</span>
               <span>•</span>
               <span>Max 10MB per image</span>
             </div>

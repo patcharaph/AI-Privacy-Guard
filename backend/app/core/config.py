@@ -28,6 +28,7 @@ class Settings(BaseSettings):
     
     # AI Model settings
     YOLO_MODEL: str = "yolov8n.pt"
+    PLATE_YOLO_MODEL: str = "yolov8n-license-plate.pt"
     FACE_DETECTION_CONFIDENCE: float = 0.5
     PLATE_DETECTION_CONFIDENCE: float = 0.5
     

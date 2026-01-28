@@ -10,6 +10,8 @@ interface ControlPanelProps {
   onBlurModeChange: (mode: BlurMode) => void;
   blurIntensity: number;
   onBlurIntensityChange: (intensity: number) => void;
+  detectionSensitivity: number;
+  onDetectionSensitivityChange: (sensitivity: number) => void;
   detectFaces: boolean;
   onDetectFacesChange: (detect: boolean) => void;
   detectPlates: boolean;
@@ -20,12 +22,12 @@ interface ControlPanelProps {
 }
 
 const EMOJI_OPTIONS = [
-  { value: "😀", label: "Smile" },
-  { value: "😎", label: "Cool" },
-  { value: "🤖", label: "Robot" },
-  { value: "🐵", label: "Monkey" },
-  { value: "⭐", label: "Star" },
-  { value: "🔒", label: "Lock" },
+  { value: "\u{1F600}", label: "Smile" },
+  { value: "\u{1F60E}", label: "Cool" },
+  { value: "\u{1F916}", label: "Robot" },
+  { value: "\u{1F435}", label: "Monkey" },
+  { value: "\u{2B50}", label: "Star" },
+  { value: "\u{1F512}", label: "Lock" },
 ];
 
 const blurModes: { value: BlurMode; label: string; icon: React.ReactNode }[] = [
@@ -39,11 +41,13 @@ export function ControlPanel({
   onBlurModeChange,
   blurIntensity,
   onBlurIntensityChange,
+  detectionSensitivity,
+  onDetectionSensitivityChange,
   detectFaces,
   onDetectFacesChange,
   detectPlates,
   onDetectPlatesChange,
-  selectedEmoji = "😀",
+  selectedEmoji = "\u{1F600}",
   onEmojiChange,
   disabled = false,
 }: ControlPanelProps) {
@@ -128,6 +132,33 @@ export function ControlPanel({
         <div className="flex justify-between text-xs text-slate-500 mt-1">
           <span>Light</span>
           <span>Strong</span>
+        </div>
+      </div>
+
+      {/* Detection Sensitivity Slider */}
+      <div>
+        <div className="flex items-center justify-between mb-2">
+          <label className="text-sm font-medium text-slate-700">
+            Detection Sensitivity
+          </label>
+          <span className="text-sm font-semibold text-primary-600">
+            {detectionSensitivity}%
+          </span>
+        </div>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={detectionSensitivity}
+          onChange={(e) =>
+            onDetectionSensitivityChange(Number(e.target.value))
+          }
+          disabled={disabled}
+          className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary-600 disabled:opacity-50 disabled:cursor-not-allowed"
+        />
+        <div className="flex justify-between text-xs text-slate-500 mt-1">
+          <span>Fewer (strict)</span>
+          <span>More (sensitive)</span>
         </div>
       </div>
 

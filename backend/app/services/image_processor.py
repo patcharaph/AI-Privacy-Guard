@@ -92,7 +92,8 @@ class ImageProcessor:
         detections = detector.detect_all(
             image,
             detect_faces=options.detect_faces,
-            detect_plates=options.detect_plates
+            detect_plates=options.detect_plates,
+            sensitivity=options.detection_sensitivity
         )
         
         logger.info(f"Found {len(detections)} detections in {filename}")
