@@ -9,8 +9,8 @@ logger = logging.getLogger(__name__)
 
 # Emoji overlay image (will be created as a simple circle with face emoji pattern)
 EMOJI_PATTERNS = {
-    "face": "😊",
-    "license_plate": "🔒"
+    "face": "\U0001F600",
+    "license_plate": "\U0001F512",
 }
 
 
@@ -86,7 +86,7 @@ class BlurProcessor:
     
     @staticmethod
     def apply_emoji_overlay(image: np.ndarray, bbox: BoundingBox, 
-                           intensity: int = 80, emoji: str = "😀") -> np.ndarray:
+                           intensity: int = 80, emoji: str = "\U0001F600") -> np.ndarray:
         """Apply emoji overlay to a region of the image with distinct visual styles."""
         x, y, w, h = bbox.x, bbox.y, bbox.width, bbox.height
         
@@ -110,9 +110,8 @@ class BlurProcessor:
         
         # Normalize emoji (remove variation selectors)
         emoji_normalized = emoji.replace('\ufe0f', '').strip()
-        
         # Draw distinct shapes based on emoji type
-        if emoji_normalized == "😀":
+        if emoji_normalized == "\U0001F600":
             # SMILEY: Yellow circle with big smile
             cv2.circle(overlay, (center_x, center_y), radius, (0, 220, 255), -1)  # Yellow
             cv2.circle(overlay, (center_x, center_y), radius, (0, 180, 220), 3)   # Border
@@ -121,10 +120,10 @@ class BlurProcessor:
             cv2.circle(overlay, (center_x - radius//3, center_y - radius//4), eye_r, (0, 0, 0), -1)
             cv2.circle(overlay, (center_x + radius//3, center_y - radius//4), eye_r, (0, 0, 0), -1)
             # Big smile
-            cv2.ellipse(overlay, (center_x, center_y + radius//6), 
+            cv2.ellipse(overlay, (center_x, center_y + radius//6),
                        (radius//2, radius//3), 0, 0, 180, (0, 0, 0), max(2, radius//15))
-            
-        elif emoji_normalized == "":
+
+        elif emoji_normalized == "\U0001F60E":
             # COOL: Yellow with BLACK sunglasses band
             cv2.circle(overlay, (center_x, center_y), radius, (0, 220, 255), -1)  # Yellow
             cv2.circle(overlay, (center_x, center_y), radius, (0, 180, 220), 3)   # Border
@@ -134,10 +133,10 @@ class BlurProcessor:
             cv2.rectangle(overlay, (center_x - radius + radius//6, glass_y - glass_h//2),
                          (center_x + radius - radius//6, glass_y + glass_h//2), (0, 0, 0), -1)
             # Cool smirk
-            cv2.ellipse(overlay, (center_x, center_y + radius//3), 
+            cv2.ellipse(overlay, (center_x, center_y + radius//3),
                        (radius//3, radius//6), 0, 0, 180, (0, 0, 0), max(2, radius//15))
-            
-        elif emoji_normalized == "�":
+
+        elif emoji_normalized == "\U0001F435":
             # MONKEY: Brown circle with hands over eyes
             cv2.circle(overlay, (center_x, center_y), radius, (80, 130, 200), -1)  # Brown/tan
             cv2.circle(overlay, (center_x, center_y), radius, (50, 90, 140), 3)    # Border
@@ -146,12 +145,12 @@ class BlurProcessor:
             cv2.circle(overlay, (center_x - radius, center_y - radius//2), ear_r, (60, 100, 160), -1)
             cv2.circle(overlay, (center_x + radius, center_y - radius//2), ear_r, (60, 100, 160), -1)
             # Hands covering eyes (two ovals)
-            cv2.ellipse(overlay, (center_x - radius//3, center_y - radius//6), 
+            cv2.ellipse(overlay, (center_x - radius//3, center_y - radius//6),
                        (radius//2, radius//3), 0, 0, 360, (100, 160, 220), -1)
-            cv2.ellipse(overlay, (center_x + radius//3, center_y - radius//6), 
+            cv2.ellipse(overlay, (center_x + radius//3, center_y - radius//6),
                        (radius//2, radius//3), 0, 0, 360, (100, 160, 220), -1)
-            
-        elif emoji_normalized == "⭐":
+
+        elif emoji_normalized == "\u2B50":
             # STAR: Gold 5-pointed star shape (no circle)
             pts = []
             for i in range(5):
@@ -165,19 +164,26 @@ class BlurProcessor:
                 pts.append([px2, py2])
             cv2.fillPoly(overlay, [np.array(pts)], (0, 215, 255))  # Gold
             cv2.polylines(overlay, [np.array(pts)], True, (0, 165, 200), 2)  # Border
-            
-        elif emoji_normalized == "❤":
-            # HEART: Red heart shape (no circle)
-            # Draw heart using two circles and a triangle
-            hr = radius * 2 // 3
-            cv2.circle(overlay, (center_x - hr//2, center_y - hr//3), hr//2 + 2, (0, 0, 220), -1)
-            cv2.circle(overlay, (center_x + hr//2, center_y - hr//3), hr//2 + 2, (0, 0, 220), -1)
-            pts = np.array([[center_x - radius + radius//6, center_y - radius//6], 
-                           [center_x, center_y + radius - radius//6], 
-                           [center_x + radius - radius//6, center_y - radius//6]], np.int32)
-            cv2.fillPoly(overlay, [pts], (0, 0, 220))  # Red
-            
-        elif emoji_normalized == "🔒":
+
+        elif emoji_normalized == "\U0001F916":
+            # ROBOT: Gray head with antenna
+            cv2.rectangle(overlay, (center_x - radius, center_y - radius),
+                         (center_x + radius, center_y + radius), (180, 180, 180), -1)
+            cv2.rectangle(overlay, (center_x - radius, center_y - radius),
+                         (center_x + radius, center_y + radius), (120, 120, 120), 3)
+            # Antenna
+            cv2.line(overlay, (center_x, center_y - radius),
+                     (center_x, center_y - radius - radius // 2), (80, 80, 80), 3)
+            cv2.circle(overlay, (center_x, center_y - radius - radius // 2), max(3, radius // 6), (0, 0, 255), -1)
+            # Eyes
+            eye_r = max(3, radius // 6)
+            cv2.circle(overlay, (center_x - radius // 3, center_y - radius // 4), eye_r, (0, 0, 0), -1)
+            cv2.circle(overlay, (center_x + radius // 3, center_y - radius // 4), eye_r, (0, 0, 0), -1)
+            # Mouth
+            cv2.rectangle(overlay, (center_x - radius // 3, center_y + radius // 5),
+                         (center_x + radius // 3, center_y + radius // 3), (90, 90, 90), -1)
+
+        elif emoji_normalized == "\U0001F512":
             # LOCK: Blue/gray padlock shape
             # Lock body (rectangle)
             body_w = radius
@@ -204,7 +210,7 @@ class BlurProcessor:
     
     @classmethod
     def process_image(cls, image: np.ndarray, detections: List[BoundingBox],
-                     blur_mode: BlurMode, intensity: int = 80, emoji: str = "😀") -> np.ndarray:
+                     blur_mode: BlurMode, intensity: int = 80, emoji: str = "\U0001F600") -> np.ndarray:
         """Process an image by applying blur to all detected regions."""
         result = image.copy()
         

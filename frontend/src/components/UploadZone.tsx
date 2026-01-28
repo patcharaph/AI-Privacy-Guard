@@ -14,7 +14,7 @@ interface UploadZoneProps {
 export function UploadZone({
   files,
   onFilesChange,
-  maxFiles = 10,
+  maxFiles = 5,
   disabled = false,
 }: UploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false);
@@ -81,12 +81,12 @@ export function UploadZone({
 
 
   useEffect(() => {
-    if (files.length == 0) {
+    if (files.length === 0) {
       setPrimaryPreviewUrl(null);
       return;
     }
 
-    const url = URL.createObjectURL(files[0]);
+    const url = URL.createObjectURL(files[files.length - 1]);
     setPrimaryPreviewUrl(url);
 
     return () => {
@@ -137,12 +137,14 @@ export function UploadZone({
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
           <img
             src={primaryPreviewUrl}
-            alt={files[0]?.name || "Uploaded preview"}
+            alt={files[files.length - 1]?.name || "Uploaded preview"}
             className="w-full max-h-[420px] object-cover"
           />
           {!disabled && (
             <button
-              onClick={() => (files.length <= 1 ? clearAll() : removeFile(0))}
+              onClick={() =>
+                files.length <= 1 ? clearAll() : removeFile(files.length - 1)
+              }
               className="absolute right-3 top-3 rounded-full bg-white/90 p-2 text-slate-700 shadow-md hover:bg-white"
               aria-label="Remove image"
             >

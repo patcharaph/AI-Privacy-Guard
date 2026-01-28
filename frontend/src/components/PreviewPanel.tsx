@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Download,
   Eye,
@@ -15,25 +15,125 @@ import { cn, downloadBase64Image } from "@/lib/utils";
 import JSZip from "jszip";
 import { saveAs } from "file-saver";
 
+interface PreviewCanvasProps {
+  result: ProcessedImageResult;
+  showOriginal: boolean;
+  editMode: boolean;
+  onToggleDetection: (detectionId: string, detectionIndex: number) => void;
+}
+
+function PreviewCanvas({
+  result,
+  showOriginal,
+  editMode,
+  onToggleDetection,
+}: PreviewCanvasProps) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const originalRef = useRef<HTMLImageElement | null>(null);
+  const processedRef = useRef<HTMLImageElement | null>(null);
+
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const original = originalRef.current;
+    const processed = processedRef.current;
+    if (!canvas || !original || !processed) return;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    if (showOriginal) {
+      ctx.drawImage(original, 0, 0);
+      return;
+    }
+
+    ctx.drawImage(processed, 0, 0);
+    result.detections.forEach((det) => {
+      if (det.enabled) return;
+      ctx.drawImage(
+        original,
+        det.x,
+        det.y,
+        det.width,
+        det.height,
+        det.x,
+        det.y,
+        det.width,
+        det.height
+      );
+    });
+  }, [result.detections, showOriginal]);
+
+  useEffect(() => {
+    const original = new Image();
+    const processed = new Image();
+    let loaded = 0;
+    const handleLoad = () => {
+      loaded += 1;
+      if (loaded < 2) return;
+      originalRef.current = original;
+      processedRef.current = processed;
+      const canvas = canvasRef.current;
+      if (canvas) {
+        canvas.width = processed.width;
+        canvas.height = processed.height;
+      }
+      drawCanvas();
+    };
+    original.onload = handleLoad;
+    processed.onload = handleLoad;
+    original.src = result.original_image_base64;
+    processed.src = result.processed_image_base64;
+  }, [result.original_image_base64, result.processed_image_base64, drawCanvas]);
+
+  useEffect(() => {
+    drawCanvas();
+  }, [drawCanvas]);
+
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!editMode) return;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    const clickX = (e.clientX - rect.left) * scaleX;
+    const clickY = (e.clientY - rect.top) * scaleY;
+
+    const clickedIndex = result.detections.findIndex(
+      (d) =>
+        clickX >= d.x &&
+        clickX <= d.x + d.width &&
+        clickY >= d.y &&
+        clickY <= d.y + d.height
+    );
+
+    if (clickedIndex !== -1) {
+      onToggleDetection(result.detections[clickedIndex].id, clickedIndex);
+    }
+  };
+
+  return (
+    <canvas
+      ref={canvasRef}
+      onClick={handleCanvasClick}
+      className={cn("w-full h-auto block", editMode && "cursor-pointer")}
+    />
+  );
+}
+
 interface PreviewPanelProps {
   results: ProcessedImageResult[];
-  originalFiles: File[];
   isProcessing: boolean;
   onReportMissed: (imageId: string) => void;
-  blurMode?: "gaussian" | "pixelation" | "emoji";
-  blurIntensity?: number;
-  emoji?: string;
   onResultsChange?: (results: ProcessedImageResult[]) => void;
 }
 
 export function PreviewPanel({
   results,
-  originalFiles,
   isProcessing,
   onReportMissed,
-  blurMode = "gaussian",
-  blurIntensity = 80,
-  emoji = "😀",
   onResultsChange,
 }: PreviewPanelProps) {
   const [showOriginal, setShowOriginal] = useState<Record<string, boolean>>({});
@@ -65,10 +165,57 @@ export function PreviewPanel({
     setShowDownloadSummary(result);
   };
 
+  const renderCompositeDataUrl = async (
+    result: ProcessedImageResult,
+    showOriginal: boolean = false
+  ): Promise<string> => {
+    const original = new Image();
+    const processed = new Image();
+    await Promise.all([
+      new Promise<void>((resolve) => {
+        original.onload = () => resolve();
+        original.src = result.original_image_base64;
+      }),
+      new Promise<void>((resolve) => {
+        processed.onload = () => resolve();
+        processed.src = result.processed_image_base64;
+      }),
+    ]);
+
+    const canvas = document.createElement("canvas");
+    canvas.width = processed.width;
+    canvas.height = processed.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return result.processed_image_base64;
+
+    if (showOriginal) {
+      ctx.drawImage(original, 0, 0);
+      return canvas.toDataURL("image/png");
+    }
+
+    ctx.drawImage(processed, 0, 0);
+    result.detections.forEach((det) => {
+      if (det.enabled) return;
+      ctx.drawImage(
+        original,
+        det.x,
+        det.y,
+        det.width,
+        det.height,
+        det.x,
+        det.y,
+        det.width,
+        det.height
+      );
+    });
+    return canvas.toDataURL("image/png");
+  };
+
   const confirmDownload = (result: ProcessedImageResult) => {
     const filename = `protected_${result.original_filename}`;
-    downloadBase64Image(result.processed_image_base64, filename);
-    setShowDownloadSummary(null);
+    renderCompositeDataUrl(result)
+      .then((dataUrl) => downloadBase64Image(dataUrl, filename))
+      .finally(() => setShowDownloadSummary(null));
   };
 
   const handleDownloadAll = async () => {
@@ -79,7 +226,8 @@ export function PreviewPanel({
       const zip = new JSZip();
 
       for (const result of results) {
-        const base64Data = result.processed_image_base64.split(",")[1];
+        const dataUrl = await renderCompositeDataUrl(result);
+        const base64Data = dataUrl.split(",")[1];
         const filename = `protected_${result.original_filename}`;
         zip.file(filename, base64Data, { base64: true });
       }
@@ -93,12 +241,27 @@ export function PreviewPanel({
     }
   };
 
-  const getOriginalPreview = (filename: string): string | null => {
-    const file = originalFiles.find((f) => f.name === filename);
-    if (file) {
-      return URL.createObjectURL(file);
-    }
-    return null;
+  const toggleDetection = (
+    imageId: string,
+    detectionId: string,
+    detectionIndex: number
+  ) => {
+    if (!onResultsChange) return;
+    const newResults = results.map((r) => {
+      if (r.image_id === imageId) {
+        return {
+          ...r,
+          detections: r.detections.map((d, idx) => {
+            if (detectionId) {
+              return d.id === detectionId ? { ...d, enabled: !d.enabled } : d;
+            }
+            return idx === detectionIndex ? { ...d, enabled: !d.enabled } : d;
+          }),
+        };
+      }
+      return r;
+    });
+    onResultsChange(newResults);
   };
 
   if (isProcessing) {
@@ -169,7 +332,6 @@ export function PreviewPanel({
       <div className="grid gap-4">
         {results.map((result) => {
           const isShowingOriginal = showOriginal[result.image_id];
-          const originalUrl = getOriginalPreview(result.original_filename);
 
           return (
             <div
@@ -178,54 +340,15 @@ export function PreviewPanel({
             >
               {/* Image Preview - Click to toggle detections in Edit mode */}
               <div 
-                className={cn(
-                  "relative aspect-video bg-slate-100",
-                  editMode[result.image_id] && "cursor-pointer"
-                )}
-                onClick={(e) => {
-                  if (!editMode[result.image_id] || !onResultsChange) return;
-                  
-                  // Get click position relative to image
-                  const rect = e.currentTarget.getBoundingClientRect();
-                  const img = e.currentTarget.querySelector('img');
-                  if (!img) return;
-                  
-                  const imgRect = img.getBoundingClientRect();
-                  const scaleX = img.naturalWidth / imgRect.width;
-                  const scaleY = img.naturalHeight / imgRect.height;
-                  const clickX = (e.clientX - imgRect.left) * scaleX;
-                  const clickY = (e.clientY - imgRect.top) * scaleY;
-                  
-                  // Find clicked detection
-                  const clickedDet = result.detections.find(d => 
-                    clickX >= d.x && clickX <= d.x + d.width &&
-                    clickY >= d.y && clickY <= d.y + d.height
-                  );
-                  
-                  if (clickedDet) {
-                    const newResults = results.map(r => {
-                      if (r.image_id === result.image_id) {
-                        return {
-                          ...r,
-                          detections: r.detections.map(d => 
-                            d.id === clickedDet.id ? { ...d, enabled: !d.enabled } : d
-                          )
-                        };
-                      }
-                      return r;
-                    });
-                    onResultsChange(newResults);
-                  }
-                }}
+                className={cn("relative bg-slate-100")}
               >
-                <img
-                  src={
-                    isShowingOriginal && originalUrl
-                      ? originalUrl
-                      : result.processed_image_base64
+                <PreviewCanvas
+                  result={result}
+                  showOriginal={isShowingOriginal}
+                  editMode={editMode[result.image_id]}
+                  onToggleDetection={(id, idx) =>
+                    toggleDetection(result.image_id, id, idx)
                   }
-                  alt={result.original_filename}
-                  className="w-full h-full object-contain"
                 />
 
                 {/* Protected Badge */}
@@ -316,18 +439,7 @@ export function PreviewPanel({
                         key={det.id || idx}
                         onClick={() => {
                           if (editMode[result.image_id] && onResultsChange) {
-                            const newResults = results.map(r => {
-                              if (r.image_id === result.image_id) {
-                                return {
-                                  ...r,
-                                  detections: r.detections.map(d => 
-                                    d.id === det.id ? { ...d, enabled: !d.enabled } : d
-                                  )
-                                };
-                              }
-                              return r;
-                            });
-                            onResultsChange(newResults);
+                            toggleDetection(result.image_id, det.id, idx);
                           }
                         }}
                         className={cn(

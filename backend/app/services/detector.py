@@ -114,7 +114,7 @@ class PrivacyDetector:
                     width = min(width, w - x)
                     height = min(height, h - y)
                     detections.append(BoundingBox(
-                        id=f"face_{len(detections)}"
+                        id=f"face_{len(detections)}",
                         x=x,
                         y=y,
                         width=width,
@@ -142,7 +142,7 @@ class PrivacyDetector:
 
         for (x, y, width, height) in faces:
             detections.append(BoundingBox(
-                id=f"face_{len(detections)}"
+                id=f"face_{len(detections)}",
                 x=x,
                 y=y,
                 width=width,
@@ -184,7 +184,7 @@ class PrivacyDetector:
                                 continue
                             score = float(boxes.conf[i]) if boxes.conf is not None else conf
                             detections.append(BoundingBox(
-                                id=f"plate_{len(detections)}"
+                                id=f"plate_{len(detections)}",
                                 x=x,
                                 y=y,
                                 width=width,
@@ -226,7 +226,7 @@ class PrivacyDetector:
 
                 if plate_width > 0 and plate_height > 0:
                     detections.append(BoundingBox(
-                        id=f"plate_{len(detections)}"
+                        id=f"plate_{len(detections)}",
                         x=plate_x,
                         y=plate_y,
                         width=plate_width,
