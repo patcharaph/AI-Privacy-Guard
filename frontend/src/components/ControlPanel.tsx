@@ -21,14 +21,7 @@ interface ControlPanelProps {
   disabled?: boolean;
 }
 
-const EMOJI_OPTIONS = [
-  { value: "\u{1F600}", label: "Smile" },
-  { value: "\u{1F60E}", label: "Cool" },
-  { value: "\u{1F916}", label: "Robot" },
-  { value: "\u{1F435}", label: "Monkey" },
-  { value: "\u{2B50}", label: "Star" },
-  { value: "\u{1F512}", label: "Lock" },
-];
+const EMOJI_OPTIONS = [{ value: "\u{1F600}", label: "Smile" }];
 
 const blurModes: { value: BlurMode; label: string; icon: React.ReactNode }[] = [
   { value: "gaussian", label: "Gaussian Blur", icon: <Eye className="w-4 h-4" /> },
@@ -79,36 +72,7 @@ export function ControlPanel({
         </div>
       </div>
 
-      {/* Emoji Selection (only show when emoji mode is selected) */}
-      {blurMode === "emoji" && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-3">
-            Choose Emoji
-          </label>
-          <div className="grid grid-cols-6 gap-2">
-            {EMOJI_OPTIONS.map((emoji) => (
-              <button
-                key={emoji.value}
-                onClick={() => onEmojiChange?.(emoji.value)}
-                disabled={disabled}
-                className={cn(
-                  "flex flex-col items-center justify-center gap-1 p-2 rounded-lg border-2 text-2xl transition-all",
-                  selectedEmoji === emoji.value
-                    ? "border-primary-500 bg-primary-50"
-                    : "border-slate-200 hover:border-slate-300",
-                  disabled && "opacity-50 cursor-not-allowed"
-                )}
-                title={emoji.label}
-              >
-                <span aria-hidden="true">{emoji.value}</span>
-                <span className="text-[10px] font-medium text-slate-500">
-                  {emoji.label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Emoji Selection removed (single emoji only) */}
 
       {/* Blur Intensity Slider */}
       <div>

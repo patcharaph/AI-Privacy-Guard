@@ -101,16 +101,18 @@ class PrivacyDetector:
                         x1, y1, x2, y2, score = bboxes[i].tolist()
                         if score < min_conf:
                             continue
-                        x = max(0, int(x1))
-                        y = max(0, int(y1))
-                        width = min(int(x2 - x1), w - x)
-                        height = min(int(y2 - y1), h - y)
+                        x1c = max(0, int(x1))
+                        y1c = max(0, int(y1))
+                        x2c = min(w, int(x2))
+                        y2c = min(h, int(y2))
+                        width = x2c - x1c
+                        height = y2c - y1c
                         if width <= 0 or height <= 0:
                             continue
                         detections.append(BoundingBox(
                             id=f"face_{len(detections)}",
-                            x=x,
-                            y=y,
+                            x=x1c,
+                            y=y1c,
                             width=width,
                             height=height,
                             confidence=float(score),
@@ -172,10 +174,12 @@ class PrivacyDetector:
                     if boxes is not None and boxes.xyxy is not None:
                         for i in range(len(boxes.xyxy)):
                             x1, y1, x2, y2 = boxes.xyxy[i].tolist()
-                            x = max(0, int(x1))
-                            y = max(0, int(y1))
-                            width = min(int(x2 - x1), w - x)
-                            height = min(int(y2 - y1), h - y)
+                            x1c = max(0, int(x1))
+                            y1c = max(0, int(y1))
+                            x2c = min(w, int(x2))
+                            y2c = min(h, int(y2))
+                            width = x2c - x1c
+                            height = y2c - y1c
                             if width <= 0 or height <= 0:
                                 continue
                             score = float(boxes.conf[i]) if boxes.conf is not None else conf
@@ -184,13 +188,13 @@ class PrivacyDetector:
                             aspect = width / height if height > 0 else 0
                             if aspect < settings.PLATE_MIN_ASPECT or aspect > settings.PLATE_MAX_ASPECT:
                                 continue
-                            center_y = y + height / 2
+                            center_y = y1c + height / 2
                             if center_y < h * settings.PLATE_MIN_Y_FRAC:
                                 continue
                             detections.append(BoundingBox(
                                 id=f"plate_{len(detections)}",
-                                x=x,
-                                y=y,
+                                x=x1c,
+                                y=y1c,
                                 width=width,
                                 height=height,
                                 confidence=score,

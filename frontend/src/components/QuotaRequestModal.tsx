@@ -23,16 +23,25 @@ export function QuotaRequestModal({ isOpen, onClose, onSubmit }: QuotaRequestMod
   const [email, setEmail] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   if (!isOpen) return null;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!useCase) return;
+    const trimmedEmail = email.trim();
+    if (trimmedEmail) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(trimmedEmail)) {
+        setEmailError("Please enter a valid email address.");
+        return;
+      }
+    }
 
     setIsSubmitting(true);
     try {
-      await onSubmit(useCase, email);
+      await onSubmit(useCase, trimmedEmail);
       setSubmitted(true);
     } catch (error) {
       console.error("Failed to request quota:", error);
@@ -45,6 +54,7 @@ export function QuotaRequestModal({ isOpen, onClose, onSubmit }: QuotaRequestMod
     setUseCase("");
     setEmail("");
     setSubmitted(false);
+    setEmailError("");
     onClose();
   };
 
@@ -118,13 +128,23 @@ export function QuotaRequestModal({ isOpen, onClose, onSubmit }: QuotaRequestMod
                 <input
                   type="email"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    if (emailError) setEmailError("");
+                  }}
                   placeholder="your@email.com"
-                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
+                  aria-invalid={!!emailError}
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 ${
+                    emailError ? "border-red-400" : "border-slate-300"
+                  }`}
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  Get notified about new features and updates
-                </p>
+                {emailError ? (
+                  <p className="text-xs text-red-600 mt-1">{emailError}</p>
+                ) : (
+                  <p className="text-xs text-slate-500 mt-1">
+                    Get notified about new features and updates
+                  </p>
+                )}
               </div>
 
               <button

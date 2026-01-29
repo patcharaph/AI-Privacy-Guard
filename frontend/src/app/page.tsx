@@ -16,11 +16,6 @@ import { processImages, submitFeedback, getQuota, requestExtraQuota, ProcessedIm
 export default function Home() {
   const EMOJI_KEY_BY_VALUE: Record<string, string> = {
     "\u{1F600}": "smile",
-    "\u{1F60E}": "cool",
-    "\u{1F916}": "robot",
-    "\u{1F435}": "monkey",
-    "\u{2B50}": "star",
-    "\u{1F512}": "lock",
   };
 
   // Upload state
@@ -298,6 +293,9 @@ export default function Home() {
               isProcessing={isProcessing}
               onReportMissed={handleReportMissed}
               onResultsChange={setResults}
+              blurMode={blurMode}
+              blurIntensity={blurIntensity}
+              emoji={selectedEmoji}
             />
           </div>
         </div>

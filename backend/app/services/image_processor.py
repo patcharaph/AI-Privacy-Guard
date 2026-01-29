@@ -6,7 +6,7 @@ import time
 import logging
 from typing import List, Tuple
 from io import BytesIO
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.models.schemas import (
     BoundingBox, BlurMode, ProcessingOptions, 
@@ -25,8 +25,11 @@ class ImageProcessor:
     @staticmethod
     def decode_image(image_bytes: bytes) -> np.ndarray:
         """Decode image bytes to numpy array."""
-        nparr = np.frombuffer(image_bytes, np.uint8)
-        image = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        # Respect EXIF orientation so detections align with displayed images
+        with Image.open(BytesIO(image_bytes)) as pil_image:
+            pil_image = ImageOps.exif_transpose(pil_image)
+            rgb_image = pil_image.convert("RGB")
+            image = cv2.cvtColor(np.array(rgb_image), cv2.COLOR_RGB2BGR)
         if image is None:
             raise ValueError("Failed to decode image")
         return image

@@ -72,10 +72,10 @@ Frontend runs at: http://localhost:3000
 
 ## Privacy & Trust
 
-- ✅ Images are processed temporarily only
-- ✅ Images are NOT stored permanently
-- ✅ Images are NOT used for training without explicit consent
-- ✅ All processing happens server-side with immediate cleanup
+- ? Images are processed temporarily only
+- ? Images are NOT stored permanently
+- ? Images are NOT used for training without explicit consent
+- ? All processing happens server-side with immediate cleanup
 
 ## API Endpoints
 
