@@ -145,5 +145,9 @@ export async function requestExtraQuota(useCase: string, email: string): Promise
     method: "POST",
     body: formData,
   });
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ detail: "Unknown error" }));
+    throw new Error(error.detail || `HTTP error ${response.status}`);
+  }
   return response.json();
 }

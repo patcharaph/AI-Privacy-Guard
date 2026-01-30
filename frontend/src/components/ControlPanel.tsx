@@ -51,14 +51,14 @@ export function ControlPanel({
         <label className="block text-sm font-medium text-slate-700 mb-3">
           Blur Mode
         </label>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {blurModes.map((mode) => (
             <button
               key={mode.value}
               onClick={() => onBlurModeChange(mode.value)}
               disabled={disabled}
               className={cn(
-                "flex flex-col items-center gap-1.5 p-3 rounded-lg border-2 transition-all",
+                "flex flex-col items-center gap-1.5 p-2.5 sm:p-3 rounded-lg border-2 transition-all",
                 blurMode === mode.value
                   ? "border-primary-500 bg-primary-50 text-primary-700"
                   : "border-slate-200 hover:border-slate-300 text-slate-600",

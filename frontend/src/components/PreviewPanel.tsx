@@ -32,8 +32,9 @@ interface PreviewCanvasProps {
   ) => void;
 }
 
-const drawManualOverlay = (
+const drawManualEffect = (
   ctx: CanvasRenderingContext2D,
+  source: HTMLImageElement,
   det: { x: number; y: number; width: number; height: number },
   blurMode: "gaussian" | "pixelation" | "emoji",
   blurIntensity: number,
@@ -68,10 +69,34 @@ const drawManualOverlay = (
     return;
   }
 
-  const alpha = Math.min(0.9, 0.3 + blurIntensity / 200);
+  if (blurMode === "gaussian") {
+    const t = blurIntensity / 100;
+    const blurPx = Math.max(1, Math.round(1 + t * t * 24));
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(x, y, width, height);
+    ctx.clip();
+    ctx.filter = `blur(${blurPx}px)`;
+    ctx.drawImage(source, 0, 0);
+    ctx.filter = "none";
+    ctx.restore();
+    return;
+  }
+
+  const t = blurIntensity / 100;
+  const pixel = Math.max(2, Math.round(2 + t * t * 22));
+  const scaledW = Math.max(1, Math.floor(width / pixel));
+  const scaledH = Math.max(1, Math.floor(height / pixel));
+  const temp = document.createElement("canvas");
+  temp.width = scaledW;
+  temp.height = scaledH;
+  const tctx = temp.getContext("2d");
+  if (!tctx) return;
+  tctx.imageSmoothingEnabled = true;
+  tctx.drawImage(source, x, y, width, height, 0, 0, scaledW, scaledH);
   ctx.save();
-  ctx.fillStyle = `rgba(128, 128, 128, ${alpha})`;
-  ctx.fillRect(x, y, width, height);
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(temp, 0, 0, scaledW, scaledH, x, y, width, height);
   ctx.restore();
 };
 
@@ -86,6 +111,27 @@ const getPaddedRect = (
   const x2 = Math.min(maxW, det.x + det.width + pad);
   const y2 = Math.min(maxH, det.y + det.height + pad);
   return { x: x1, y: y1, width: x2 - x1, height: y2 - y1 };
+};
+
+const getPresetBox = (
+  clickX: number,
+  clickY: number,
+  imgW: number,
+  imgH: number,
+  detectionType: "face" | "license_plate"
+) => {
+  const minDim = Math.min(imgW, imgH);
+  const faceSize = Math.max(30, Math.round(minDim * 0.18));
+  const plateW = Math.max(60, Math.round(imgW * 0.28));
+  const plateH = Math.max(24, Math.round(imgH * 0.1));
+
+  const width = detectionType === "face" ? faceSize : plateW;
+  const height = detectionType === "face" ? faceSize : plateH;
+  const halfW = width / 2;
+  const halfH = height / 2;
+  const x = Math.min(Math.max(0, clickX - halfW), imgW - width);
+  const y = Math.min(Math.max(0, clickY - halfH), imgH - height);
+  return { x: Math.round(x), y: Math.round(y), width: Math.round(width), height: Math.round(height) };
 };
 
 function PreviewCanvas({
@@ -129,7 +175,7 @@ function PreviewCanvas({
     result.detections.forEach((det) => {
       if (!det.enabled) return;
       if (!det.id?.startsWith("manual_")) return;
-      drawManualOverlay(ctx, det, blurMode, blurIntensity, emoji);
+      drawManualEffect(ctx, original, det, blurMode, blurIntensity, emoji);
     });
     deletedDetections.forEach((det) => {
       const padded = getPaddedRect(det, original.width, original.height, 6);
@@ -277,6 +323,18 @@ function PreviewCanvas({
       );
       if (clickedIndex !== -1) {
         onToggleDetection(result.detections[clickedIndex].id, clickedIndex);
+      } else {
+        const baseImage = originalRef.current || processedRef.current;
+        if (baseImage) {
+          const preset = getPresetBox(
+            clickX,
+            clickY,
+            baseImage.width,
+            baseImage.height,
+            addDetectionType
+          );
+          onAddDetection(preset, addDetectionType);
+        }
       }
     } else {
       const x1 = Math.min(dragStart.x, end.x) * scaleX;
@@ -418,7 +476,7 @@ export function PreviewPanel({
     result.detections.forEach((det) => {
       if (!det.enabled) return;
       if (!det.id?.startsWith("manual_")) return;
-      drawManualOverlay(ctx, det, blurMode, blurIntensity, emoji);
+      drawManualEffect(ctx, original, det, blurMode, blurIntensity, emoji);
     });
     (deletedDetections[result.image_id] || []).forEach((det) => {
       const padded = getPaddedRect(det, original.width, original.height, 6);
@@ -599,7 +657,7 @@ export function PreviewPanel({
   return (
     <div className="space-y-4">
       {/* Summary Header */}
-      <div className="flex items-center justify-between p-4 bg-green-50 border border-green-200 rounded-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-green-50 border border-green-200 rounded-lg">
         <div className="flex items-center gap-3">
           <CheckCircle className="w-6 h-6 text-green-600" />
           <div>
@@ -614,7 +672,7 @@ export function PreviewPanel({
         <button
           onClick={handleDownloadAll}
           disabled={downloadingZip}
-          className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+          className="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 w-full sm:w-auto"
         >
           {downloadingZip ? (
             <Loader2 className="w-4 h-4 animate-spin" />
@@ -700,21 +758,21 @@ export function PreviewPanel({
 
               {/* Image Info & Actions */}
               <div className="p-4">
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                   <div>
-                    <p className="font-medium text-slate-700 truncate max-w-[200px]">
+                    <p className="font-medium text-slate-700 truncate max-w-[160px] sm:max-w-[240px]">
                       {result.original_filename}
                     </p>
                     <p className="text-xs text-slate-500">
                       Processed in {result.processing_time_ms.toFixed(0)}ms
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-col sm:flex-row w-full sm:w-auto items-stretch sm:items-center gap-2">
                     {/* Toggle Original/Protected */}
                     <button
                       onClick={() => toggleOriginal(result.image_id)}
                       className={cn(
-                        "flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors",
+                        "flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm rounded-lg border transition-colors w-full sm:w-auto",
                         isShowingOriginal
                           ? "border-amber-300 bg-amber-50 text-amber-700"
                           : "border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -736,7 +794,7 @@ export function PreviewPanel({
                     {/* Download Button */}
                     <button
                       onClick={() => handleDownloadSingle(result)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors"
+                      className="flex items-center justify-center gap-1.5 px-3 py-1.5 text-sm bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors w-full sm:w-auto"
                     >
                       <Download className="w-4 h-4" />
                       Download
@@ -847,7 +905,7 @@ export function PreviewPanel({
       {showDownloadSummary && (
         <div className="fixed inset-0 z-50 flex items-center justify-center">
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowDownloadSummary(null)} />
-          <div className="relative bg-white rounded-xl p-6 max-w-sm mx-4 shadow-xl">
+          <div className="relative bg-white rounded-xl p-6 max-w-sm w-[92vw] mx-4 shadow-xl">
             <h3 className="font-semibold text-slate-800 text-lg mb-4">Final Check</h3>
             
             {(() => {

@@ -117,16 +117,16 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="p-2 bg-primary-100 rounded-lg">
                 <img src="/icons/icon-72.png" alt="AI Privacy Guard" className="w-6 h-6" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-slate-800">
+                <h1 className="text-base sm:text-xl font-bold text-slate-800">
                   AI Privacy Guard
                 </h1>
-                <p className="text-xs text-slate-500">BETA · Free Trial</p>
+                <p className="text-[11px] sm:text-xs text-slate-500">BETA · Free Trial</p>
               </div>
             </div>
             {hasResults && (
@@ -142,12 +142,12 @@ export default function Home() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <div className="grid lg:grid-cols-2 gap-8">
           {/* Left Panel - Upload & Controls */}
           <div className="space-y-6">
             {/* Upload Section */}
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-800 mb-4">
                 Upload Images
               </h2>
@@ -160,7 +160,7 @@ export default function Home() {
             </section>
 
             {/* Controls Section */}
-            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <section className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6">
               <h2 className="text-lg font-semibold text-slate-800 mb-4">
                 Privacy Settings
               </h2>
@@ -185,7 +185,7 @@ export default function Home() {
             <div className="space-y-3">
               {/* Quota Display */}
               {quotaQuery.data && (
-                <div className="flex items-center justify-between text-sm px-1">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 text-sm px-1">
                   <span className="text-slate-600">
                     Batches today: <span className="font-medium">{quotaQuery.data.used}/{quotaQuery.data.limit}</span> used
                   </span>
@@ -198,7 +198,7 @@ export default function Home() {
               <button
                 onClick={handleProcess}
                 disabled={!hasFiles || isProcessing || (quotaQuery.data?.remaining === 0)}
-                className="w-full flex items-center justify-center gap-2 px-6 py-4 bg-primary-600 text-white text-lg font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-600/20"
+                className="w-full flex items-center justify-center gap-2 px-6 py-3 sm:py-4 bg-primary-600 text-white text-base sm:text-lg font-semibold rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary-600/20"
               >
                 {isProcessing ? (
                   <>
@@ -214,7 +214,7 @@ export default function Home() {
               </button>
 
               {/* Privacy Notice */}
-              <div className="flex items-center justify-center gap-2 text-xs text-slate-500">
+              <div className="flex items-center justify-center gap-2 text-xs text-slate-500 text-center">
                 <svg
                   className="w-4 h-4 text-green-500"
                   fill="none"
@@ -284,7 +284,7 @@ export default function Home() {
           </div>
 
           {/* Right Panel - Preview */}
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 min-h-[600px]">
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 sm:p-6 min-h-[420px] lg:min-h-[600px]">
             <h2 className="text-lg font-semibold text-slate-800 mb-4">
               Preview & Results
             </h2>
@@ -304,7 +304,7 @@ export default function Home() {
       {/* Footer */}
       <footer className="border-t border-slate-200 bg-white mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
             <p className="text-sm text-slate-500">
               AI Privacy Guard BETA - Protecting your visual privacy
             </p>

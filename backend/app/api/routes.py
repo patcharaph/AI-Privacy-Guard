@@ -4,6 +4,10 @@ from typing import List, Optional
 import uuid
 import logging
 import json
+import re
+from datetime import datetime, timezone
+from pathlib import Path
+import csv
 
 from app.models.schemas import (
     ProcessingOptions, ProcessingResponse, BlurMode,
@@ -32,6 +36,21 @@ feedback_store: List[dict] = []
 
 # Simple rate limiting store (IP -> count)
 rate_limit_store: dict = {}
+
+EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
+LOGS_DIR = Path(__file__).resolve().parents[2] / "logs"
+FEEDBACK_LOG = LOGS_DIR / "feedback.csv"
+QUOTA_LOG = LOGS_DIR / "quota_requests.csv"
+
+
+def _append_csv(path: Path, headers: list[str], row: dict) -> None:
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    file_exists = path.exists()
+    with path.open("a", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        if not file_exists:
+            writer.writeheader()
+        writer.writerow(row)
 
 
 @router.get("/health", response_model=HealthResponse)
@@ -178,6 +197,18 @@ async def submit_feedback(feedback: FeedbackRequest):
         "detection_coordinates": feedback.detection_coordinates
     }
     feedback_store.append(feedback_entry)
+    _append_csv(
+        FEEDBACK_LOG,
+        ["timestamp", "id", "missed_type", "comment", "image_id", "detection_coordinates"],
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "id": feedback_id,
+            "missed_type": feedback.missed_type,
+            "comment": feedback.comment or "",
+            "image_id": feedback.image_id or "",
+            "detection_coordinates": json.dumps(feedback.detection_coordinates or {}),
+        },
+    )
     
     logger.info(f"Feedback received: {feedback_id} - Missed {feedback.missed_type}")
     
@@ -224,20 +255,34 @@ async def request_extra_quota(request: Request, use_case: str = Form(...), email
     """Request extra quota - collects lead info for BETA feedback."""
     client_ip = request.client.host if request.client else "unknown"
     request_id = str(uuid.uuid4())[:8]
+    email_clean = email.strip()
+    if email_clean and not EMAIL_RE.match(email_clean):
+        raise HTTPException(status_code=422, detail="Invalid email format")
     
     quota_requests.append({
         "id": request_id,
         "ip": client_ip,
         "use_case": use_case,
-        "email": email,
+        "email": email_clean,
         "timestamp": str(uuid.uuid4())  # Simple timestamp placeholder
     })
+    _append_csv(
+        QUOTA_LOG,
+        ["timestamp", "id", "ip", "use_case", "email"],
+        {
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "id": request_id,
+            "ip": client_ip,
+            "use_case": use_case,
+            "email": email_clean,
+        },
+    )
     
     # Grant 5 extra batches
     if client_ip in rate_limit_store:
         rate_limit_store[client_ip] = max(0, rate_limit_store[client_ip] - 5)
     
-    logger.info(f"Quota request: {request_id} - Use case: {use_case}, Email: {email}")
+    logger.info(f"Quota request: {request_id} - Use case: {use_case}, Email: {email_clean}")
     
     return {
         "success": True,

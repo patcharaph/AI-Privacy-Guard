@@ -102,7 +102,7 @@ export function UploadZone({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         className={cn(
-          "relative border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 cursor-pointer",
+          "relative border-2 border-dashed rounded-xl p-5 sm:p-8 text-center transition-all duration-200 cursor-pointer",
           isDragOver
             ? "border-primary-500 bg-primary-50"
             : "border-slate-300 hover:border-primary-400 hover:bg-slate-50",
@@ -122,10 +122,10 @@ export function UploadZone({
             <Upload className="w-8 h-8 text-primary-600" />
           </div>
           <div>
-            <p className="text-lg font-medium text-slate-700">
+            <p className="text-base sm:text-lg font-medium text-slate-700">
               Drop images here or click to browse
             </p>
-            <p className="text-sm text-slate-500 mt-1">
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
               JPG, PNG, WEBP • Max 10MB each • Up to {maxFiles} images
             </p>
           </div>
@@ -138,7 +138,7 @@ export function UploadZone({
           <img
             src={primaryPreviewUrl}
             alt={files[files.length - 1]?.name || "Uploaded preview"}
-            className="w-full max-h-[420px] object-cover"
+            className="w-full max-h-[300px] sm:max-h-[420px] object-cover"
           />
           {!disabled && (
             <button
@@ -234,7 +234,7 @@ export function UploadZone({
                 {!disabled && (
                   <button
                     onClick={() => removeFile(index)}
-                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity"
                   >
                     <X className="w-3 h-3" />
                   </button>

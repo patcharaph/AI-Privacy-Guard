@@ -44,7 +44,12 @@ export function QuotaRequestModal({ isOpen, onClose, onSubmit }: QuotaRequestMod
       await onSubmit(useCase, trimmedEmail);
       setSubmitted(true);
     } catch (error) {
-      console.error("Failed to request quota:", error);
+      const message = error instanceof Error ? error.message : "";
+      if (message.toLowerCase().includes("email")) {
+        setEmailError("Please enter a valid email address.");
+      } else {
+        console.error("Failed to request quota:", error);
+      }
     } finally {
       setIsSubmitting(false);
     }
