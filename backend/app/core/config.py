@@ -32,10 +32,17 @@ class Settings(BaseSettings):
     FACE_MODEL: str = "retinaface_mnet025_v1"
     FACE_DETECTION_CONFIDENCE: float = 0.5
     PLATE_DETECTION_CONFIDENCE: float = 0.5
-    PLATE_MIN_CONFIDENCE: float = 0.6
-    PLATE_MIN_ASPECT: float = 2.0
-    PLATE_MAX_ASPECT: float = 6.0
-    PLATE_MIN_Y_FRAC: float = 0.5
+    # More permissive defaults to improve recall on small/angled plates
+    PLATE_MIN_CONFIDENCE: float = 0.2
+    PLATE_MIN_ASPECT: float = 1.5
+    PLATE_MAX_ASPECT: float = 8.0
+    PLATE_MIN_Y_FRAC: float = 0.35
+    # Set to 0 to disable the corresponding filter
+    PLATE_FILTER_BY_ASPECT: bool = True
+    PLATE_FILTER_BY_Y_FRAC: bool = True
+    DEBUG_PLATE_DETECTION: bool = False
+    # Higher imgsz can improve small-plate recall at the cost of speed
+    PLATE_YOLO_IMGSZ: int = 1280
     
     # Default blur settings
     DEFAULT_BLUR_INTENSITY: int = 80

@@ -3,6 +3,7 @@ import numpy as np
 import os
 from typing import List
 import logging
+from pathlib import Path
 
 from app.models.schemas import BoundingBox, DetectionType
 from app.core.config import settings
@@ -36,6 +37,8 @@ class PrivacyDetector:
             return
 
         logger.info("Initializing AI detection models...")
+        if settings.DEBUG_PLATE_DETECTION:
+            logger.warning("DEBUG_PLATE_DETECTION enabled")
 
         # RetinaFace (MobileNet) via insightface model zoo
         self.face_detector_loaded = False
@@ -63,9 +66,22 @@ class PrivacyDetector:
             logger.warning("Ultralytics not available, plate detection will fall back to Haar Cascade")
         else:
             try:
-                self.plate_model = YOLO(settings.PLATE_YOLO_MODEL)
-                self.plate_detector_loaded = True
-                logger.info("YOLO license-plate model loaded successfully")
+                plate_model_path = self._resolve_model_path(settings.PLATE_YOLO_MODEL)
+                if settings.DEBUG_PLATE_DETECTION:
+                    logger.warning("Plate YOLO model path resolved to: %s", plate_model_path)
+                if not Path(plate_model_path).exists():
+                    logger.warning(
+                        "YOLO plate model file not found at %s (cwd=%s)",
+                        plate_model_path,
+                        os.getcwd()
+                    )
+                else:
+                    self.plate_model = YOLO(plate_model_path)
+                    self.plate_detector_loaded = True
+                    if settings.DEBUG_PLATE_DETECTION:
+                        logger.warning("YOLO license-plate model loaded successfully")
+                    else:
+                        logger.info("YOLO license-plate model loaded successfully")
             except Exception as e:
                 logger.warning(f"Failed to load YOLO plate model: {e}")
 
@@ -166,11 +182,20 @@ class PrivacyDetector:
                 results = self.plate_model.predict(
                     source=image,
                     conf=conf,
+                    imgsz=settings.PLATE_YOLO_IMGSZ,
                     verbose=False,
                     device="cpu"
                 )
                 if results:
                     boxes = results[0].boxes
+                    if settings.DEBUG_PLATE_DETECTION:
+                        count = 0 if boxes is None or boxes.xyxy is None else len(boxes.xyxy)
+                        logger.info(
+                            "Plate YOLO raw boxes: %s (conf=%.2f imgsz=%d)",
+                            count,
+                            conf,
+                            settings.PLATE_YOLO_IMGSZ
+                        )
                     if boxes is not None and boxes.xyxy is not None:
                         for i in range(len(boxes.xyxy)):
                             x1, y1, x2, y2 = boxes.xyxy[i].tolist()
@@ -184,13 +209,34 @@ class PrivacyDetector:
                                 continue
                             score = float(boxes.conf[i]) if boxes.conf is not None else conf
                             if score < settings.PLATE_MIN_CONFIDENCE:
+                                if settings.DEBUG_PLATE_DETECTION:
+                                    logger.info(
+                                        "Plate reject: low_conf score=%.3f min=%.3f",
+                                        score,
+                                        settings.PLATE_MIN_CONFIDENCE
+                                    )
                                 continue
-                            aspect = width / height if height > 0 else 0
-                            if aspect < settings.PLATE_MIN_ASPECT or aspect > settings.PLATE_MAX_ASPECT:
-                                continue
-                            center_y = y1c + height / 2
-                            if center_y < h * settings.PLATE_MIN_Y_FRAC:
-                                continue
+                            if settings.PLATE_FILTER_BY_ASPECT:
+                                aspect = width / height if height > 0 else 0
+                                if aspect < settings.PLATE_MIN_ASPECT or aspect > settings.PLATE_MAX_ASPECT:
+                                    if settings.DEBUG_PLATE_DETECTION:
+                                        logger.info(
+                                            "Plate reject: aspect=%.2f range=[%.2f, %.2f]",
+                                            aspect,
+                                            settings.PLATE_MIN_ASPECT,
+                                            settings.PLATE_MAX_ASPECT
+                                        )
+                                    continue
+                            if settings.PLATE_FILTER_BY_Y_FRAC:
+                                center_y = y1c + height / 2
+                                if center_y < h * settings.PLATE_MIN_Y_FRAC:
+                                    if settings.DEBUG_PLATE_DETECTION:
+                                        logger.info(
+                                            "Plate reject: center_y=%.1f min_y=%.1f",
+                                            center_y,
+                                            h * settings.PLATE_MIN_Y_FRAC
+                                        )
+                                    continue
                             detections.append(BoundingBox(
                                 id=f"plate_{len(detections)}",
                                 x=x1c,
@@ -265,10 +311,19 @@ class PrivacyDetector:
 
         return all_detections
 
+    def _resolve_model_path(self, model_path: str) -> str:
+        path = Path(model_path)
+        if path.is_absolute():
+            return str(path)
+        if path.exists():
+            return str(path)
+        backend_root = Path(__file__).resolve().parents[2]
+        return str(backend_root / path)
+
     @property
     def models_loaded(self) -> bool:
         """Check if core models are loaded."""
-        return self.face_detector_loaded
+        return self.face_detector_loaded and self.plate_detector_loaded
 
 
 # Singleton instance

@@ -122,6 +122,14 @@ async def process_images(
 
     # Log received emoji for debugging
     logger.info(f"Received emoji: '{emoji}' (repr: {repr(emoji)})")
+    if settings.DEBUG_PLATE_DETECTION:
+        logger.info(
+            "Process request: files=%d detect_faces=%s detect_plates=%s sensitivity=%d",
+            len(files),
+            detect_faces,
+            detect_plates,
+            detection_sensitivity
+        )
     
     # Create processing options
     options = ProcessingOptions(
