@@ -63,6 +63,8 @@ Thumbs.db
 
 # YOLO model files (downloaded on first run)
 *.pt
+# But keep our license plate model
+!backend/yolov8s-license-plate.pt
 
 # Temporary files
 tmp/
