@@ -38,9 +38,9 @@ class Settings(BaseSettings):
     PLATE_MAX_ASPECT: float = 8.0
     PLATE_MIN_Y_FRAC: float = 0.35
     # Set to 0 to disable the corresponding filter
-    PLATE_FILTER_BY_ASPECT: bool = True
-    PLATE_FILTER_BY_Y_FRAC: bool = True
-    DEBUG_PLATE_DETECTION: bool = False
+    PLATE_FILTER_BY_ASPECT: bool = False
+    PLATE_FILTER_BY_Y_FRAC: bool = False
+    DEBUG_PLATE_DETECTION: bool = True
     # Higher imgsz can improve small-plate recall at the cost of speed
     PLATE_YOLO_IMGSZ: int = 1280
     
