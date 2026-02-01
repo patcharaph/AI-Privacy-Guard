@@ -9,9 +9,11 @@ from app.models.schemas import BoundingBox, DetectionType
 from app.core.config import settings
 
 try:
-    from insightface.model_zoo import get_model as get_insightface_model
+    from insightface.app import FaceAnalysis
+    INSIGHTFACE_AVAILABLE = True
 except Exception:  # pragma: no cover - optional dependency at runtime
-    get_insightface_model = None
+    FaceAnalysis = None
+    INSIGHTFACE_AVAILABLE = False
 
 try:
     from ultralytics import YOLO
@@ -40,19 +42,19 @@ class PrivacyDetector:
         if settings.DEBUG_PLATE_DETECTION:
             logger.warning("DEBUG_PLATE_DETECTION enabled")
 
-        # RetinaFace (MobileNet) via insightface model zoo
+        # RetinaFace via insightface FaceAnalysis
         self.face_detector_loaded = False
         self.face_model = None
-        if get_insightface_model is None:
+        if not INSIGHTFACE_AVAILABLE:
             logger.warning("InsightFace not available, face detection will fall back to Haar Cascade")
         else:
             try:
-                self.face_model = get_insightface_model(settings.FACE_MODEL)
+                self.face_model = FaceAnalysis(name='buffalo_sc', providers=['CPUExecutionProvider'])
                 self.face_model.prepare(ctx_id=0, det_size=(640, 640))
                 self.face_detector_loaded = True
-                logger.info("RetinaFace (MobileNet) loaded successfully")
+                logger.info("InsightFace FaceAnalysis loaded successfully")
             except Exception as e:
-                logger.warning(f"Failed to load RetinaFace model: {e}")
+                logger.warning(f"Failed to load InsightFace model: {e}")
 
         # Fallback Haar Cascade for Face Detection
         cascade_path = cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
@@ -111,33 +113,34 @@ class PrivacyDetector:
 
         if self.face_detector_loaded and self.face_model is not None:
             try:
-                bboxes, _ = self.face_model.detect(image, threshold=min_conf)
-                if bboxes is not None:
-                    for i in range(bboxes.shape[0]):
-                        x1, y1, x2, y2, score = bboxes[i].tolist()
-                        if score < min_conf:
-                            continue
-                        x1c = max(0, int(x1))
-                        y1c = max(0, int(y1))
-                        x2c = min(w, int(x2))
-                        y2c = min(h, int(y2))
-                        width = x2c - x1c
-                        height = y2c - y1c
-                        if width <= 0 or height <= 0:
-                            continue
-                        detections.append(BoundingBox(
-                            id=f"face_{len(detections)}",
-                            x=x1c,
-                            y=y1c,
-                            width=width,
-                            height=height,
-                            confidence=float(score),
-                            detection_type=DetectionType.FACE,
-                            enabled=True
-                        ))
+                faces = self.face_model.get(image)
+                for face in faces:
+                    score = float(face.det_score) if hasattr(face, 'det_score') else min_conf
+                    if score < min_conf:
+                        continue
+                    bbox = face.bbox.astype(int)
+                    x1, y1, x2, y2 = bbox
+                    x1c = max(0, int(x1))
+                    y1c = max(0, int(y1))
+                    x2c = min(w, int(x2))
+                    y2c = min(h, int(y2))
+                    width = x2c - x1c
+                    height = y2c - y1c
+                    if width <= 0 or height <= 0:
+                        continue
+                    detections.append(BoundingBox(
+                        id=f"face_{len(detections)}",
+                        x=x1c,
+                        y=y1c,
+                        width=width,
+                        height=height,
+                        confidence=float(score),
+                        detection_type=DetectionType.FACE,
+                        enabled=True
+                    ))
                 return detections
             except Exception as e:
-                logger.error(f"RetinaFace detection failed: {e}")
+                logger.error(f"InsightFace detection failed: {e}")
 
         # Fallback to Haar Cascade
         if not self.face_cascade_loaded:
@@ -236,6 +239,31 @@ class PrivacyDetector:
                                             center_y,
                                             h * settings.PLATE_MIN_Y_FRAC
                                         )
+                                    continue
+                            # Filter oversized boxes (likely detecting cars, not plates)
+                            if settings.PLATE_FILTER_BY_SIZE:
+                                width_ratio = width / w
+                                height_ratio = height / h
+                                if width_ratio > settings.PLATE_MAX_WIDTH_RATIO or height_ratio > settings.PLATE_MAX_HEIGHT_RATIO:
+                                    if settings.DEBUG_PLATE_DETECTION:
+                                        logger.info(
+                                            "Plate reject: oversized w_ratio=%.2f (max=%.2f) h_ratio=%.2f (max=%.2f)",
+                                            width_ratio,
+                                            settings.PLATE_MAX_WIDTH_RATIO,
+                                            height_ratio, 
+                                            settings.PLATE_MAX_HEIGHT_RATIO
+                                        )
+                                    continue
+                            # Apply shrink ratio to reduce oversized bounding box
+                            shrink = settings.PLATE_SHRINK_RATIO
+                            if shrink > 0:
+                                shrink_w = int(width * shrink)
+                                shrink_h = int(height * shrink)
+                                x1c = x1c + shrink_w
+                                y1c = y1c + shrink_h
+                                width = width - 2 * shrink_w
+                                height = height - 2 * shrink_h
+                                if width <= 0 or height <= 0:
                                     continue
                             detections.append(BoundingBox(
                                 id=f"plate_{len(detections)}",

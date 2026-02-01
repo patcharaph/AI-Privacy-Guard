@@ -33,16 +33,22 @@ class Settings(BaseSettings):
     FACE_DETECTION_CONFIDENCE: float = 0.5
     PLATE_DETECTION_CONFIDENCE: float = 0.5
     # More permissive defaults to improve recall on small/angled plates
-    PLATE_MIN_CONFIDENCE: float = 0.2
-    PLATE_MIN_ASPECT: float = 1.5
-    PLATE_MAX_ASPECT: float = 8.0
+    PLATE_MIN_CONFIDENCE: float = 0.4
+    PLATE_MIN_ASPECT: float = 2.0  # Real plates are wide rectangles (aspect 3-5)
+    PLATE_MAX_ASPECT: float = 7.0
     PLATE_MIN_Y_FRAC: float = 0.35
+    # Filter oversized boxes (max % of image dimensions)
+    PLATE_MAX_WIDTH_RATIO: float = 0.30  # Max 30% of image width
+    PLATE_MAX_HEIGHT_RATIO: float = 0.15  # Max 15% of image height
     # Set to 0 to disable the corresponding filter
-    PLATE_FILTER_BY_ASPECT: bool = False
+    PLATE_FILTER_BY_ASPECT: bool = True
     PLATE_FILTER_BY_Y_FRAC: bool = False
+    PLATE_FILTER_BY_SIZE: bool = True
     DEBUG_PLATE_DETECTION: bool = True
     # Higher imgsz can improve small-plate recall at the cost of speed
     PLATE_YOLO_IMGSZ: int = 1280
+    # Shrink bounding box by this ratio (0.15 = shrink 15% from each edge)
+    PLATE_SHRINK_RATIO: float = 0.15
     
     # Default blur settings
     DEFAULT_BLUR_INTENSITY: int = 80
