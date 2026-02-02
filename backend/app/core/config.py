@@ -32,14 +32,14 @@ class Settings(BaseSettings):
     FACE_MODEL: str = "retinaface_mnet025_v1"
     FACE_DETECTION_CONFIDENCE: float = 0.5
     PLATE_DETECTION_CONFIDENCE: float = 0.5
-    # More permissive defaults to improve recall on small/angled plates
-    PLATE_MIN_CONFIDENCE: float = 0.4
-    PLATE_MIN_ASPECT: float = 2.0  # Real plates are wide rectangles (aspect 3-5)
-    PLATE_MAX_ASPECT: float = 7.0
-    PLATE_MIN_Y_FRAC: float = 0.35
+    # More permissive defaults to improve recall on Thai/international plates
+    PLATE_MIN_CONFIDENCE: float = 0.25  # Lowered for better recall
+    PLATE_MIN_ASPECT: float = 1.2  # Thai plates have lower aspect ratio (~1.5-2.0)
+    PLATE_MAX_ASPECT: float = 8.0  # Allow wider range
+    PLATE_MIN_Y_FRAC: float = 0.20  # Allow plates higher in image
     # Filter oversized boxes (max % of image dimensions)
-    PLATE_MAX_WIDTH_RATIO: float = 0.30  # Max 30% of image width
-    PLATE_MAX_HEIGHT_RATIO: float = 0.15  # Max 15% of image height
+    PLATE_MAX_WIDTH_RATIO: float = 0.50  # Max 50% of image width (for close-up shots)
+    PLATE_MAX_HEIGHT_RATIO: float = 0.25  # Max 25% of image height
     # Set to 0 to disable the corresponding filter
     PLATE_FILTER_BY_ASPECT: bool = True
     PLATE_FILTER_BY_Y_FRAC: bool = False
@@ -47,8 +47,8 @@ class Settings(BaseSettings):
     DEBUG_PLATE_DETECTION: bool = True
     # Higher imgsz can improve small-plate recall at the cost of speed
     PLATE_YOLO_IMGSZ: int = 1280
-    # Shrink bounding box by this ratio (0.15 = shrink 15% from each edge)
-    PLATE_SHRINK_RATIO: float = 0.15
+    # Shrink bounding box by this ratio (0.10 = shrink 10% from each edge)
+    PLATE_SHRINK_RATIO: float = 0.10  # Reduced to capture more plate area
     
     # Default blur settings
     DEFAULT_BLUR_INTENSITY: int = 80
