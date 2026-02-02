@@ -90,6 +90,41 @@ Frontend runs at: http://localhost:3000
 - Max 10 images per batch
 - Max 5 batches per IP per day (configurable)
 
+## Deployment
+
+### Google Cloud Run (Recommended)
+
+The backend is containerized and optimized for Google Cloud Run deployment.
+
+```bash
+cd backend
+
+# Build and deploy to Cloud Run
+gcloud run deploy ai-privacy-guard-backend \
+  --source . \
+  --region asia-southeast1 \
+  --platform managed \
+  --allow-unauthenticated \
+  --memory 4Gi \
+  --cpu 2 \
+  --min-instances 0 \
+  --max-instances 10 \
+  --port 8080
+```
+
+**Recommended specs:**
+- **vCPU**: 2 cores (for AI inference)
+- **Memory**: 4 GB (for model loading)
+- **Region**: asia-southeast1 (Singapore)
+
+### Local Docker
+
+```bash
+cd backend
+docker build -t ai-privacy-guard-backend .
+docker run -p 8080:8080 ai-privacy-guard-backend
+```
+
 ## License
 
 MIT License - For BETA evaluation purposes only.
