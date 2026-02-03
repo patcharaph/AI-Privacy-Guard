@@ -53,6 +53,27 @@ def _append_csv(path: Path, headers: list[str], row: dict) -> None:
         writer.writerow(row)
 
 
+def _load_requested_emails() -> set[str]:
+    """Load emails that have already requested quota from CSV on startup."""
+    emails: set[str] = set()
+    if QUOTA_LOG.exists():
+        try:
+            with QUOTA_LOG.open(newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for row in reader:
+                    email = row.get("email", "").strip().lower()
+                    if email:
+                        emails.add(email)
+            logger.info(f"Loaded {len(emails)} emails from quota request log")
+        except Exception as e:
+            logger.error(f"Failed to load quota request emails: {e}")
+    return emails
+
+
+# Track emails that have already requested extra quota (loaded from CSV on startup)
+quota_requested_emails: set[str] = _load_requested_emails()
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health_check():
     """Health check endpoint."""
@@ -260,19 +281,37 @@ quota_requests: List[dict] = []
 
 @router.post("/request-quota")
 async def request_extra_quota(request: Request, use_case: str = Form(...), email: str = Form(default="")):
-    """Request extra quota - collects lead info for BETA feedback."""
+    """
+    Request extra quota - collects lead info for BETA feedback.
+    
+    Each email can only request extra quota once. If no email is provided,
+    the request is allowed but email-based tracking won't apply.
+    """
     client_ip = request.client.host if request.client else "unknown"
     request_id = str(uuid.uuid4())[:8]
-    email_clean = email.strip()
+    email_clean = email.strip().lower()  # Normalize to lowercase
+    
+    # Validate email format if provided
     if email_clean and not EMAIL_RE.match(email_clean):
         raise HTTPException(status_code=422, detail="Invalid email format")
+    
+    # Check if this email has already requested quota (only if email provided)
+    if email_clean and email_clean in quota_requested_emails:
+        raise HTTPException(
+            status_code=429,
+            detail="This email has already requested extra quota. Each email can only request once."
+        )
+    
+    # Add email to tracking set (only if email provided)
+    if email_clean:
+        quota_requested_emails.add(email_clean)
     
     quota_requests.append({
         "id": request_id,
         "ip": client_ip,
         "use_case": use_case,
         "email": email_clean,
-        "timestamp": str(uuid.uuid4())  # Simple timestamp placeholder
+        "timestamp": datetime.now(timezone.utc).isoformat()
     })
     _append_csv(
         QUOTA_LOG,
@@ -290,7 +329,7 @@ async def request_extra_quota(request: Request, use_case: str = Form(...), email
     if client_ip in rate_limit_store:
         rate_limit_store[client_ip] = max(0, rate_limit_store[client_ip] - 5)
     
-    logger.info(f"Quota request: {request_id} - Use case: {use_case}, Email: {email_clean}")
+    logger.info(f"Quota request: {request_id} - Use case: {use_case}, Email: {email_clean or 'not provided'}")
     
     return {
         "success": True,

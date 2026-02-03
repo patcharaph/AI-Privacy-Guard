@@ -9,6 +9,8 @@ import {
   AlertTriangle,
   Loader2,
   FileArchive,
+  Trash2,
+  XCircle,
 } from "lucide-react";
 import { ProcessedImageResult } from "@/lib/api";
 import { cn, downloadBase64Image } from "@/lib/utils";
@@ -344,11 +346,11 @@ function PreviewCanvas({
       const width = x2 - x1;
       const height = y2 - y1;
       if (width >= 10 && height >= 10) {
-      onAddDetection(
-        { x: Math.round(x1), y: Math.round(y1), width: Math.round(width), height: Math.round(height) },
-        addDetectionType
-      );
-    }
+        onAddDetection(
+          { x: Math.round(x1), y: Math.round(y1), width: Math.round(width), height: Math.round(height) },
+          addDetectionType
+        );
+      }
     }
 
     setDragStart(null);
@@ -395,6 +397,7 @@ interface PreviewPanelProps {
   isProcessing: boolean;
   onReportMissed: (imageId: string) => void;
   onResultsChange?: (results: ProcessedImageResult[]) => void;
+  onDeleteImage?: (imageId: string) => void;
   blurMode: "gaussian" | "pixelation" | "emoji";
   blurIntensity: number;
   emoji: string;
@@ -405,6 +408,7 @@ export function PreviewPanel({
   isProcessing,
   onReportMissed,
   onResultsChange,
+  onDeleteImage,
   blurMode,
   blurIntensity,
   emoji,
@@ -616,6 +620,30 @@ export function PreviewPanel({
     onResultsChange(newResults);
   };
 
+  const clearAllProtected = (imageId: string) => {
+    if (!onResultsChange) return;
+    const newResults = results.map((r) => {
+      if (r.image_id === imageId) {
+        return {
+          ...r,
+          detections: r.detections.map((d) => ({ ...d, enabled: false })),
+        };
+      }
+      return r;
+    });
+    onResultsChange(newResults);
+  };
+
+  const handleDeleteImage = (imageId: string) => {
+    if (onDeleteImage) {
+      onDeleteImage(imageId);
+    } else if (onResultsChange) {
+      // Fallback: remove from results if no dedicated handler
+      const newResults = results.filter((r) => r.image_id !== imageId);
+      onResultsChange(newResults);
+    }
+  };
+
   const getAddType = (imageId: string) =>
     addDetectionType[imageId] || "face";
 
@@ -694,7 +722,7 @@ export function PreviewPanel({
               className="bg-white border border-slate-200 rounded-xl overflow-hidden"
             >
               {/* Image Preview - Click to toggle detections in Edit mode */}
-              <div 
+              <div
                 className={cn("relative bg-slate-100")}
               >
                 <PreviewCanvas
@@ -834,7 +862,7 @@ export function PreviewPanel({
                                   : "bg-purple-100 text-purple-700"
                                 : "bg-red-50 text-red-400 border border-red-200",
                               editMode[result.image_id] &&
-                                "cursor-pointer hover:ring-2 ring-primary-300"
+                              "cursor-pointer hover:ring-2 ring-primary-300"
                             )}
                             disabled={!editMode[result.image_id]}
                             title={editMode[result.image_id] ? "Tap to toggle, hold to delete" : undefined}
@@ -850,41 +878,63 @@ export function PreviewPanel({
 
                 {/* Add Detection Type (Edit Mode) */}
                 {editMode[result.image_id] && (
-                  <div className="flex items-center gap-2 mb-3">
-                    <span className="text-xs text-slate-500">Add detection:</span>
-                    <button
-                      onClick={() =>
-                        setAddDetectionType((prev) => ({
-                          ...prev,
-                          [result.image_id]: "face",
-                        }))
-                      }
-                      className={cn(
-                        "px-2 py-0.5 text-xs font-medium rounded-full border",
-                        getAddType(result.image_id) === "face"
-                          ? "border-blue-300 bg-blue-50 text-blue-700"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      Face
-                    </button>
-                    <button
-                      onClick={() =>
-                        setAddDetectionType((prev) => ({
-                          ...prev,
-                          [result.image_id]: "license_plate",
-                        }))
-                      }
-                      className={cn(
-                        "px-2 py-0.5 text-xs font-medium rounded-full border",
-                        getAddType(result.image_id) === "license_plate"
-                          ? "border-purple-300 bg-purple-50 text-purple-700"
-                          : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                      )}
-                    >
-                      Plate
-                    </button>
-                  </div>
+                  <>
+                    <div className="flex items-center gap-2 mb-3">
+                      <span className="text-xs text-slate-500">Add detection:</span>
+                      <button
+                        onClick={() =>
+                          setAddDetectionType((prev) => ({
+                            ...prev,
+                            [result.image_id]: "face",
+                          }))
+                        }
+                        className={cn(
+                          "px-2 py-0.5 text-xs font-medium rounded-full border",
+                          getAddType(result.image_id) === "face"
+                            ? "border-blue-300 bg-blue-50 text-blue-700"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        )}
+                      >
+                        Face
+                      </button>
+                      <button
+                        onClick={() =>
+                          setAddDetectionType((prev) => ({
+                            ...prev,
+                            [result.image_id]: "license_plate",
+                          }))
+                        }
+                        className={cn(
+                          "px-2 py-0.5 text-xs font-medium rounded-full border",
+                          getAddType(result.image_id) === "license_plate"
+                            ? "border-purple-300 bg-purple-50 text-purple-700"
+                            : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                        )}
+                      >
+                        Plate
+                      </button>
+                    </div>
+
+                    {/* Clear All Protected & Delete Image Buttons */}
+                    <div className="flex items-center gap-2 mb-3">
+                      <button
+                        onClick={() => clearAllProtected(result.image_id)}
+                        className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-lg border border-amber-300 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                        title="Remove all blur protections"
+                      >
+                        <XCircle className="w-3.5 h-3.5" />
+                        Clear All Protected
+                      </button>
+                      <button
+                        onClick={() => handleDeleteImage(result.image_id)}
+                        className="flex items-center gap-1.5 px-2 py-1 text-xs font-medium rounded-lg border border-red-300 bg-red-50 text-red-700 hover:bg-red-100 transition-colors"
+                        title="Delete this image"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        Delete Image
+                      </button>
+                    </div>
+                  </>
                 )}
 
                 {/* Report Missed Detection */}
@@ -907,11 +957,11 @@ export function PreviewPanel({
           <div className="absolute inset-0 bg-black/50" onClick={() => setShowDownloadSummary(null)} />
           <div className="relative bg-white rounded-xl p-6 max-w-sm w-[92vw] mx-4 shadow-xl">
             <h3 className="font-semibold text-slate-800 text-lg mb-4">Final Check</h3>
-            
+
             {(() => {
               const totals = getTotals(showDownloadSummary);
               const hasDisabled = totals.facesDisabled > 0 || totals.platesDisabled > 0;
-              
+
               return (
                 <>
                   <div className="space-y-2 mb-4">
