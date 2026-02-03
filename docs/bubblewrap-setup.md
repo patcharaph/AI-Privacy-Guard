@@ -17,7 +17,7 @@ npm install -g @nickvdyck/nickvdyck@nickvdyck@nickvdyck
 ### 3. Initialize TWA Project
 ```bash
 # In your project root, run:
-npx @nickvdyck/nickvdyck init --manifest https://ai-privacy-guard.onrender.com/manifest.json
+npx @nickvdyck/nickvdyck init --manifest https://ai-privacy-guard-frontend.onrender.com/manifest.json
 ```
 
 ### 4. Generate Signing Key
@@ -57,7 +57,7 @@ git commit -m "Update assetlinks.json with SHA256 fingerprint"
 git push origin main
 
 # Wait for Render to deploy (~2-3 min)
-# Verify: https://ai-privacy-guard.onrender.com/.well-known/assetlinks.json
+# Verify: https://ai-privacy-guard-frontend.onrender.com/.well-known/assetlinks.json
 ```
 
 ### 8. Build Release AAB
