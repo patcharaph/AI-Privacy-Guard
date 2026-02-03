@@ -173,12 +173,10 @@ function PreviewCanvas({
       return;
     }
 
+    // 1. Start with processed image (has blur from backend)
     ctx.drawImage(processed, 0, 0);
-    result.detections.forEach((det) => {
-      if (!det.enabled) return;
-      if (!det.id?.startsWith("manual_")) return;
-      drawManualEffect(ctx, original, det, blurMode, blurIntensity, emoji);
-    });
+
+    // 2. Restore original pixels for deleted detections
     deletedDetections.forEach((det) => {
       const padded = getPaddedRect(det, original.width, original.height, 6);
       ctx.drawImage(
@@ -193,6 +191,8 @@ function PreviewCanvas({
         padded.height
       );
     });
+
+    // 3. Restore original pixels for disabled detections
     result.detections.forEach((det) => {
       if (det.enabled) return;
       ctx.drawImage(
@@ -207,7 +207,14 @@ function PreviewCanvas({
         det.height
       );
     });
-  }, [result.detections, showOriginal, blurMode, blurIntensity, emoji]);
+
+    // 4. Draw manual effects LAST (on top of everything)
+    result.detections.forEach((det) => {
+      if (!det.enabled) return;
+      if (!det.id?.startsWith("manual_")) return;
+      drawManualEffect(ctx, original, det, blurMode, blurIntensity, emoji);
+    });
+  }, [result.detections, showOriginal, blurMode, blurIntensity, emoji, deletedDetections]);
 
   useEffect(() => {
     const original = new Image();
