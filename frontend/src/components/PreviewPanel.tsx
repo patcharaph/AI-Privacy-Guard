@@ -622,11 +622,20 @@ export function PreviewPanel({
 
   const clearAllProtected = (imageId: string) => {
     if (!onResultsChange) return;
+    const targetResult = results.find((r) => r.image_id === imageId);
+    if (targetResult) {
+      // Add all detections to deleted list for canvas rendering (restore original pixels)
+      setDeletedDetections((prev) => ({
+        ...prev,
+        [imageId]: [...(prev[imageId] || []), ...targetResult.detections],
+      }));
+    }
+    // Remove all detections from the result
     const newResults = results.map((r) => {
       if (r.image_id === imageId) {
         return {
           ...r,
-          detections: r.detections.map((d) => ({ ...d, enabled: false })),
+          detections: [], // Clear all detections
         };
       }
       return r;
