@@ -70,3 +70,8 @@ Thumbs.db
 tmp/
 temp/
 *.tmp
+
+# Android Signing Keys (Keep Secret!)
+*.keystore
+*.jks
+key.properties
