@@ -10,14 +10,14 @@
 
 ### 2. Install Bubblewrap CLI
 ```bash
-npm install -g @nickvdyck/nickvdyck@nickvdyck@nickvdyck
+npm install -g @bubblewrap/cli
 # Or use npx (recommended)
 ```
 
 ### 3. Initialize TWA Project
 ```bash
 # In your project root, run:
-npx @nickvdyck/nickvdyck init --manifest https://ai-privacy-guard-frontend.onrender.com/manifest.json
+npx @bubblewrap/cli init --manifest https://ai-privacy-guard-frontend.onrender.com/manifest.json
 ```
 
 ### 4. Generate Signing Key
@@ -62,7 +62,7 @@ git push origin main
 
 ### 8. Build Release AAB
 ```bash
-npx @nickvdyck/nickvdyck build
+npx @bubblewrap/cli build
 # This creates: app-release-bundle.aab
 ```
 
