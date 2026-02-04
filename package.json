@@ -1,0 +1,8 @@
+{
+  "scripts": {
+    "generate-icons": "node scripts/generate-icons.js"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.5"
+  }
+}
