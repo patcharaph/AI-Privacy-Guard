@@ -90,11 +90,31 @@ Frontend runs at: http://localhost:3000
 - Max 10 images per batch
 - Max 5 batches per IP per day (configurable)
 
+## Architecture
+
+```mermaid
+graph LR
+    User[User / Browser] -->|HTTPS| Frontend[Frontend (Vercel)]
+    Frontend -->|API Requests| Backend[Backend (Cloud Run)]
+    Backend -->|Model Inference| AI[AI Models (YOLO/Face)]
+```
+
 ## Deployment
 
-### Google Cloud Run (Recommended)
+### Frontend (Vercel) - Recommended
 
-The backend is containerized and optimized for Google Cloud Run deployment.
+The frontend is optimized for **Vercel**.
+
+1. Import this repository into Vercel.
+2. Set **Root Directory** to `frontend`.
+3. Set **Framework Preset** to `Next.js`.
+4. Add Environment Variable:
+   - `NEXT_PUBLIC_API_URL`: Your Cloud Run Backend URL (e.g., `https://...run.app`)
+5. Deploy! 🚀
+
+### Backend (Google Cloud Run) - Recommended
+
+The backend is containerized and optimized for Google Cloud Run deployment (Docker).
 
 ```bash
 cd backend
@@ -113,12 +133,13 @@ gcloud run deploy ai-privacy-guard-backend \
 ```
 
 **Recommended specs:**
+- **Runtime**: Docker (mandatory for OpenCV/System dependencies)
 - **vCPU**: 2 cores (for AI inference)
 - **Memory**: 4 GB (for model loading)
 - **Region**: asia-southeast1 (Singapore)
+- **Startup CPU Boost**: Enabled (recommended for faster cold starts)
 
 ### Local Docker
-
 ```bash
 cd backend
 docker build -t ai-privacy-guard-backend .

@@ -75,3 +75,6 @@ temp/
 *.keystore
 *.jks
 key.properties
+
+# Vercel
+.vercel

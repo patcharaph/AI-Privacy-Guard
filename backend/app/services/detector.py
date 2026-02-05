@@ -38,13 +38,30 @@ class PrivacyDetector:
         if PrivacyDetector._initialized:
             return
 
-        logger.info("Initializing AI detection models...")
+        logger.info("Initializing PrivacyDetector (models will load lazily)...")
         if settings.DEBUG_PLATE_DETECTION:
             logger.warning("DEBUG_PLATE_DETECTION enabled")
 
-        # RetinaFace via insightface FaceAnalysis
         self.face_detector_loaded = False
         self.face_model = None
+        self.face_cascade = None
+        self.face_cascade_loaded = False
+
+        self.plate_detector_loaded = False
+        self.plate_model = None
+        self.car_cascade = None
+        self.car_detector_loaded = False
+
+        PrivacyDetector._initialized = True
+
+    def _load_models(self):
+        """Load models if they haven't been loaded yet."""
+        if self.models_loaded:
+            return
+
+        logger.info("Loading AI detection models...")
+        
+        # RetinaFace via insightface FaceAnalysis
         if not INSIGHTFACE_AVAILABLE:
             logger.warning("InsightFace not available, face detection will fall back to Haar Cascade")
         else:
@@ -62,8 +79,6 @@ class PrivacyDetector:
         self.face_cascade_loaded = not self.face_cascade.empty()
 
         # YOLOv8s for license plate detection
-        self.plate_detector_loaded = False
-        self.plate_model = None
         if YOLO is None:
             logger.warning("Ultralytics not available, plate detection will fall back to Haar Cascade")
         else:
@@ -97,11 +112,11 @@ class PrivacyDetector:
             self.car_detector_loaded = False
             logger.warning("Car cascade not available, license plate detection will be limited")
 
-        PrivacyDetector._initialized = True
-        logger.info("AI detection models initialized successfully")
+        logger.info("AI detection models loaded successfully")
 
     def detect_faces(self, image: np.ndarray, sensitivity: int = 60) -> List[BoundingBox]:
         """Detect faces using RetinaFace (fallback to Haar Cascade)."""
+        self._load_models()
         detections: List[BoundingBox] = []
 
         h, w = image.shape[:2]
@@ -173,6 +188,7 @@ class PrivacyDetector:
 
     def detect_license_plates(self, image: np.ndarray, sensitivity: int = 60) -> List[BoundingBox]:
         """Detect license plates using YOLOv8s (fallback to Haar Cascade)."""
+        self._load_models()
         detections: List[BoundingBox] = []
 
         h, w = image.shape[:2]
