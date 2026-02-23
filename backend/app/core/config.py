@@ -50,6 +50,12 @@ class Settings(BaseSettings):
     # Shrink bounding box by this ratio (0.10 = shrink 10% from each edge)
     PLATE_SHRINK_RATIO: float = 0.10  # Reduced to capture more plate area
     
+    # Cost estimation (Cloud Run asia-southeast1, 2 vCPU, 4GB)
+    COST_PER_CPU_SECOND: float = 0.000058
+    
+    # Admin dashboard protection (optional in local dev, required in production)
+    ADMIN_API_KEY: Optional[str] = None
+
     # Default blur settings
     DEFAULT_BLUR_INTENSITY: int = 80
     

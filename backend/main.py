@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes import router
+from app.api.admin_routes import admin_router
 from app.core.config import settings
 
 # Configure logging
@@ -33,6 +34,7 @@ app.add_middleware(
 
 # Include API routes
 app.include_router(router, prefix="/api", tags=["Privacy Guard"])
+app.include_router(admin_router, prefix="/api/admin", tags=["Admin Dashboard"])
 
 
 @app.get("/")

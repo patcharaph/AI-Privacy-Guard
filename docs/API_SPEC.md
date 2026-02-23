@@ -9,6 +9,11 @@
 
 No authentication required for BETA version.
 
+Admin endpoints under `/api/admin/*` support API key protection:
+- Header: `X-Admin-Key: <your-admin-key>`
+- Backend env: `ADMIN_API_KEY`
+- If `ADMIN_API_KEY` is unset, admin endpoints remain open (development mode).
+
 ## Rate Limiting
 
 - **Max images per batch**: 10
@@ -162,6 +167,31 @@ Get basic statistics for BETA evaluation.
   },
   "rate_limit_store_size": 15
 }
+```
+
+---
+
+### 5. Admin Dashboard Endpoints (Internal)
+
+Base path: `/api/admin`
+
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/overview` | High-level combined dashboard metrics |
+| GET | `/processing/logs?limit=100&offset=0` | Recent processing logs |
+| GET | `/processing/daily?date=YYYY-MM-DD` | Daily processing summary |
+| GET | `/processing/daily/range?days=30` | Daily summaries for last N days |
+| GET | `/processing/monthly?month=YYYY-MM` | Monthly processing summary |
+| GET | `/feedback/summary` | Feedback aggregation and recent feedback |
+| GET | `/quota/summary` | Quota request aggregation and recent requests |
+| GET | `/errors/logs?limit=50` | Recent error logs |
+| GET | `/cost/summary?days=30` | Cost summary with daily breakdown |
+
+Example with key:
+
+```bash
+curl -X GET "http://localhost:8000/api/admin/overview" \
+  -H "X-Admin-Key: change-me"
 ```
 
 ---

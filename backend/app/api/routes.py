@@ -15,6 +15,7 @@ from app.models.schemas import (
 )
 from app.services.image_processor import image_processor
 from app.services.detector import detector
+from app.services.admin_logger import admin_logger
 from app.core.config import settings
 
 logger = logging.getLogger(__name__)
@@ -98,7 +99,7 @@ async def process_images(
 ):
     """
     Process uploaded images with privacy blur.
-    
+
     - **files**: List of image files (max 10, each max 10MB)
     - **blur_mode**: gaussian, pixelation, or emoji
     - **blur_intensity**: 0-100 (default 80)
@@ -107,23 +108,44 @@ async def process_images(
     - **detection_sensitivity**: 0-100 (lower = stricter, fewer detections)
     - **emoji**: Emoji to use for overlay (default 😀)
     """
+    # Generate request ID for admin logging
+    request_id = str(uuid.uuid4())[:8]
+    client_ip = request.client.host if request.client else "unknown"
+    total_file_size = 0
+
     # Validate batch size
     if len(files) > settings.MAX_BATCH_SIZE:
+        admin_logger.log_error(
+            request_id=request_id, endpoint="/api/process", client_ip=client_ip,
+            error_type="ValidationError",
+            error_message=f"Batch size {len(files)} exceeds max {settings.MAX_BATCH_SIZE}",
+            status_code=400,
+        )
         raise HTTPException(
             status_code=400,
             detail=f"Maximum {settings.MAX_BATCH_SIZE} images per batch allowed"
         )
-    
+
     if len(files) == 0:
+        admin_logger.log_error(
+            request_id=request_id, endpoint="/api/process", client_ip=client_ip,
+            error_type="ValidationError", error_message="No files provided",
+            status_code=400,
+        )
         raise HTTPException(
             status_code=400,
             detail="No files provided"
         )
-    
+
     # Simple rate limiting by IP
-    client_ip = request.client.host if request.client else "unknown"
     if client_ip in rate_limit_store:
         if rate_limit_store[client_ip] >= settings.RATE_LIMIT_PER_DAY:
+            admin_logger.log_error(
+                request_id=request_id, endpoint="/api/process", client_ip=client_ip,
+                error_type="RateLimitExceeded",
+                error_message=f"Rate limit exceeded ({settings.RATE_LIMIT_PER_DAY} batches/day)",
+                status_code=429,
+            )
             raise HTTPException(
                 status_code=429,
                 detail=f"Rate limit exceeded. Maximum {settings.RATE_LIMIT_PER_DAY} batches per day."
@@ -131,13 +153,13 @@ async def process_images(
         rate_limit_store[client_ip] += 1
     else:
         rate_limit_store[client_ip] = 1
-    
+
     # Parse blur mode
     try:
         blur_mode_enum = BlurMode(blur_mode.lower())
     except ValueError:
         blur_mode_enum = BlurMode.GAUSSIAN
-    
+
     if emoji_key and emoji_key in EMOJI_KEY_MAP:
         emoji = EMOJI_KEY_MAP[emoji_key]
 
@@ -151,7 +173,7 @@ async def process_images(
             detect_plates,
             detection_sensitivity
         )
-    
+
     # Create processing options
     options = ProcessingOptions(
         blur_mode=blur_mode_enum,
@@ -162,36 +184,71 @@ async def process_images(
         emoji=emoji,
         emoji_key=emoji_key
     )
-    
+
     # Read and validate all files
     images_to_process = []
     for file in files:
         try:
             content = await file.read()
-            
+            total_file_size += len(content)
+
             # Validate image
             is_valid, message = image_processor.validate_image(content, file.filename or "unknown")
             if not is_valid:
                 logger.warning(f"Invalid file {file.filename}: {message}")
                 continue
-            
+
             images_to_process.append((content, file.filename or "unknown"))
         except Exception as e:
             logger.error(f"Error reading file {file.filename}: {e}")
             continue
-    
+
     if not images_to_process:
+        admin_logger.log_error(
+            request_id=request_id, endpoint="/api/process", client_ip=client_ip,
+            error_type="ValidationError", error_message="No valid images to process",
+            status_code=400,
+        )
+        admin_logger.log_processing_request(
+            request_id=request_id, client_ip=client_ip,
+            image_count=0, total_file_size_bytes=total_file_size,
+            blur_mode=blur_mode_enum.value, detect_faces=detect_faces,
+            detect_plates=detect_plates, detection_sensitivity=detection_sensitivity,
+            faces_detected=0, plates_detected=0, total_detections=0,
+            processing_time_ms=0, status="error",
+            error_message="No valid images to process",
+        )
         raise HTTPException(
             status_code=400,
             detail="No valid images to process"
         )
-    
+
     # Process images
     try:
         results, total_time, total_detections = await image_processor.process_batch(
             images_to_process, options
         )
-        
+
+        # Count detections by type for admin log
+        faces_detected = sum(
+            1 for r in results for d in r.detections
+            if d.detection_type.value == "face"
+        )
+        plates_detected = sum(
+            1 for r in results for d in r.detections
+            if d.detection_type.value == "license_plate"
+        )
+
+        admin_logger.log_processing_request(
+            request_id=request_id, client_ip=client_ip,
+            image_count=len(results), total_file_size_bytes=total_file_size,
+            blur_mode=blur_mode_enum.value, detect_faces=detect_faces,
+            detect_plates=detect_plates, detection_sensitivity=detection_sensitivity,
+            faces_detected=faces_detected, plates_detected=plates_detected,
+            total_detections=total_detections,
+            processing_time_ms=round(total_time, 2), status="success",
+        )
+
         return ProcessingResponse(
             success=True,
             message=f"Successfully processed {len(results)} image(s)",
@@ -202,6 +259,18 @@ async def process_images(
         )
     except Exception as e:
         logger.error(f"Processing error: {e}")
+        admin_logger.log_error(
+            request_id=request_id, endpoint="/api/process", client_ip=client_ip,
+            error_type=type(e).__name__, error_message=str(e), status_code=500,
+        )
+        admin_logger.log_processing_request(
+            request_id=request_id, client_ip=client_ip,
+            image_count=len(images_to_process), total_file_size_bytes=total_file_size,
+            blur_mode=blur_mode_enum.value, detect_faces=detect_faces,
+            detect_plates=detect_plates, detection_sensitivity=detection_sensitivity,
+            faces_detected=0, plates_detected=0, total_detections=0,
+            processing_time_ms=0, status="error", error_message=str(e),
+        )
         raise HTTPException(
             status_code=500,
             detail=f"Processing failed: {str(e)}"
