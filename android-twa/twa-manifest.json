@@ -1,6 +1,6 @@
 {
   "packageId": "com.aiprivacyguard.twa",
-  "host": "ai-privacy-guard-frontend.onrender.com",
+  "host": "ai-privacy-guard-alpha.vercel.app",
   "name": "AI Privacy Guard",
   "launcherName": "AI Privacy",
   "display": "standalone",
@@ -13,18 +13,18 @@
   "backgroundColor": "#FFFFFF",
   "enableNotifications": true,
   "startUrl": "/",
-  "iconUrl": "https://ai-privacy-guard-frontend.onrender.com/icons/icon-512.png",
-  "maskableIconUrl": "https://ai-privacy-guard-frontend.onrender.com/icons/icon-maskable-512.png",
+  "iconUrl": "https://ai-privacy-guard-alpha.vercel.app/icons/icon-512.png",
+  "maskableIconUrl": "https://ai-privacy-guard-alpha.vercel.app/icons/icon-maskable-512.png",
   "splashScreenFadeOutDuration": 300,
   "signingKey": {
     "path": "D:\\GitHub\\AI-Privacy-Guard\\android-twa\\android.keystore",
     "alias": "android"
   },
-  "appVersionName": "144",
-  "appVersionCode": 4,
+  "appVersionName": "5",
+  "appVersionCode": 5,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
-  "webManifestUrl": "https://ai-privacy-guard-frontend.onrender.com/manifest.json",
+  "webManifestUrl": "https://ai-privacy-guard-alpha.vercel.app/manifest.json",
   "fallbackType": "customtabs",
   "features": {},
   "alphaDependencies": {
@@ -33,7 +33,7 @@
   "enableSiteSettingsShortcut": true,
   "isChromeOSOnly": false,
   "isMetaQuest": false,
-  "fullScopeUrl": "https://ai-privacy-guard-frontend.onrender.com/",
+  "fullScopeUrl": "https://ai-privacy-guard-alpha.vercel.app/",
   "minSdkVersion": 21,
   "orientation": "portrait-primary",
   "fingerprints": [],
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "144"
+  "appVersion": "5"
 }

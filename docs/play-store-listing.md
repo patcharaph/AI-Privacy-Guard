@@ -55,3 +55,16 @@ AI Privacy Guard is a free, privacy-focused tool that automatically detects and 
 No hidden costs, no premium features locked behind paywalls. AI Privacy Guard is free to use for everyone.
 
 Made with ❤️ for privacy advocates everywhere.
+
+## How to Update Production Release
+
+1.  **Login** to [Google Play Console](https://play.google.com/console).
+2.  Select your app (**AI Privacy Guard**).
+3.  In the left menu, under **Release**, click **Production** (or *Testing* -> *Open testing* if in beta).
+4.  Click **Create new release** (top right) or **Edit release**.
+5.  **App bundles**:
+    *   Drag and drop the `app-release-bundle.aab` file here.
+    *   (Delete old `.aab` files if any remained in the list).
+6.  **Release notes**:
+    *   Add a simple note, e.g., "Updated privacy features and improved stability."
+7.  Click **Next** -> **Save** -> **Submit for review**.
