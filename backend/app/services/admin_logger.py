@@ -331,6 +331,13 @@ class AdminLogger:
             "avg_cost_per_day_usd": round(total_cost / active_days, 6) if active_days else 0,
         }
 
+    @staticmethod
+    def _parse_ts(ts_str: str) -> datetime | None:
+        try:
+            return datetime.fromisoformat(ts_str)
+        except (ValueError, TypeError):
+            return None
+
     def get_overview(self) -> dict:
         uptime_seconds = time.time() - self._startup_time
         hours = int(uptime_seconds // 3600)
@@ -339,12 +346,22 @@ class AdminLogger:
         proc_rows = self._read_csv(PROCESSING_LOG)
         error_rows = self._read_csv(ERROR_LOG)
         today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+        cutoff_24h = datetime.now(timezone.utc) - timedelta(hours=24)
 
         total_requests = len(proc_rows)
         total_images = sum(self._safe_int(r.get("image_count")) for r in proc_rows)
         total_detections = sum(self._safe_int(r.get("total_detections")) for r in proc_rows)
         total_time = sum(self._safe_float(r.get("processing_time_ms")) for r in proc_rows)
         requests_today = sum(1 for r in proc_rows if r.get("timestamp", "").startswith(today_str))
+
+        # Last 24h processing stats
+        proc_24h = [r for r in proc_rows if (ts := self._parse_ts(r.get("timestamp", ""))) and ts >= cutoff_24h]
+        requests_24h = len(proc_24h)
+        images_24h = sum(self._safe_int(r.get("image_count")) for r in proc_24h)
+        detections_24h = sum(self._safe_int(r.get("total_detections")) for r in proc_24h)
+        time_24h = sum(self._safe_float(r.get("processing_time_ms")) for r in proc_24h)
+        cost_24h = sum(self._safe_float(r.get("estimated_cost_usd")) for r in proc_24h)
+        errors_24h = sum(1 for r in error_rows if (ts := self._parse_ts(r.get("timestamp", ""))) and ts >= cutoff_24h)
 
         total_cost = sum(self._safe_float(r.get("estimated_cost_usd")) for r in proc_rows)
         today_cost = sum(
@@ -373,6 +390,14 @@ class AdminLogger:
                 "total_detections": total_detections,
                 "avg_processing_time_ms": round(total_time / total_requests, 2) if total_requests else 0,
                 "requests_today": requests_today,
+            },
+            "last_24h": {
+                "requests": requests_24h,
+                "images_processed": images_24h,
+                "detections": detections_24h,
+                "avg_processing_time_ms": round(time_24h / requests_24h, 2) if requests_24h else 0,
+                "errors": errors_24h,
+                "estimated_cost_usd": round(cost_24h, 6),
             },
             "feedback": {
                 "total_count": len(feedback_rows),

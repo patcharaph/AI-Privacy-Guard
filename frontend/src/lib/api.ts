@@ -1,4 +1,12 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function normalizeApiBaseUrl(rawUrl?: string): string {
+  const fallback = "http://localhost:8000";
+  const input = (rawUrl || fallback).trim();
+  const withoutTrailingSlash = input.replace(/\/+$/, "");
+  // Accept either "https://host" or "https://host/api" from env.
+  return withoutTrailingSlash.replace(/\/api$/i, "");
+}
+
+const API_BASE_URL = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
 const ADMIN_API_KEY = process.env.NEXT_PUBLIC_ADMIN_API_KEY;
 
 export interface BoundingBox {
@@ -187,6 +195,14 @@ export interface AdminOverview {
     total_detections: number;
     avg_processing_time_ms: number;
     requests_today: number;
+  };
+  last_24h: {
+    requests: number;
+    images_processed: number;
+    detections: number;
+    avg_processing_time_ms: number;
+    errors: number;
+    estimated_cost_usd: number;
   };
   feedback: {
     total_count: number;
